@@ -98,10 +98,23 @@ export function watchPwDump(): [Promise<void>, Readable] {
     read() {},
   });
   const prom = new Promise<void>((resolve, reject) => {
-    const ls = spawn("pw-dump", ["-m", "--color=never"]);
+    const cmd = spawn("pw-dump", ["-m", "--color=never"]);
+
+    cmd.stderr.on("data", (data) => {
+      error(`pw-dump stderr: ${data.toString()}`);
+    });
+
+    cmd.on("close", (code) => {
+      log(`pw-dump process exited with code ${code}`);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(code);
+      }
+    });
 
     let stdoutBuf = "";
-    ls.stdout.on("data", (data) => {
+    cmd.stdout.on("data", (data) => {
       const dataStr: string = "\n" + data.toString();
 
       stdoutBuf += dataStr;
@@ -135,19 +148,6 @@ export function watchPwDump(): [Promise<void>, Readable] {
 
         openBracketIndex = stdoutBuf.indexOf("\n[");
         closingBracketIndex = stdoutBuf.indexOf("\n]");
-      }
-    });
-
-    ls.stderr.on("data", (data) => {
-      error(`stderr: ${data}`);
-    });
-
-    ls.on("close", (code) => {
-      log(`child process exited with code ${code}`);
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(code);
       }
     });
   });

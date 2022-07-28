@@ -4,7 +4,6 @@ export function run(cmd: string): Promise<[string, string]> {
   return new Promise((resolve, reject) => {
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
-        console.error(`exec error: ${error}`);
         reject(error);
         return;
       }

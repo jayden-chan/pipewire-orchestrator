@@ -1,14 +1,14 @@
 import { Convert, PipewireItem, PipewireItemType } from "./types";
+import { Readable } from "stream";
 import { run } from "../util";
+import { spawn } from "child_process";
+import { error, log, warn } from "../logger";
 
 export type Links = {
-  [key: string]: [string, string][];
-};
-
-export type NewLinks = {
   [key: string]: {
     item: PipewireItem;
     port: PipewireItem;
+    // [node, port]
     links: [PipewireItem, PipewireItem][];
   };
 };
@@ -20,37 +20,158 @@ export type PipewireItems = {
 export type PipewireDump = {
   items: PipewireItems;
   links: {
-    forward: NewLinks;
-    reverse: NewLinks;
+    forward: Links;
+    reverse: Links;
   };
 };
 
-export async function pipewireDump(): Promise<PipewireDump> {
-  const [stdout, stderr] = await run("pw-dump --color=never");
-  if (stderr.length !== 0) {
-    console.error("ERROR");
-    console.error(stderr);
-    throw new Error("Failed to get pw-dump");
+export type NodeAndPort = {
+  node: string;
+  port: string;
+};
+
+export async function ensureLink(
+  src: NodeAndPort,
+  dest: NodeAndPort,
+  dump: PipewireDump
+): Promise<void> {
+  const items = Object.values(dump.items);
+  const srcNode = items.find(
+    (item) =>
+      item.type === PipewireItemType.PipeWireInterfaceNode &&
+      item.info?.props?.["node.description"] === src.node
+  );
+
+  if (srcNode === undefined) {
+    warn("failed to find src node");
+    return;
   }
 
+  const destNode = items.find(
+    (item) =>
+      item.type === PipewireItemType.PipeWireInterfaceNode &&
+      item.info?.props?.["node.description"] === dest.node
+  );
+
+  if (destNode === undefined) {
+    warn("failed to find dest node");
+    return;
+  }
+
+  const srcPort = items.find(
+    (item) =>
+      item.type === PipewireItemType.PipeWireInterfacePort &&
+      item.info?.props?.["node.id"] === srcNode.id &&
+      item.info?.props?.["port.name"] === src.port
+  );
+
+  if (srcPort === undefined) {
+    warn("failed to locate src port");
+    return;
+  }
+
+  const destPort = items.find(
+    (item) =>
+      item.type === PipewireItemType.PipeWireInterfacePort &&
+      item.info?.props?.["node.id"] === destNode.id &&
+      item.info?.props?.["port.name"] === dest.port
+  );
+
+  if (destPort === undefined) {
+    warn("failed to locate dest port");
+    return;
+  }
+
+  const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
+  if (
+    srcLinks === undefined ||
+    !srcLinks.links.some((link) => link[0].id === destNode.id)
+  ) {
+    const command = `pw-link "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    log(`[command] ${command}`);
+    await run(command);
+  }
+}
+
+export function watchPwDump(): [Promise<void>, Readable] {
+  const stream = new Readable({
+    read() {},
+  });
+  const prom = new Promise<void>((resolve, reject) => {
+    const ls = spawn("pw-dump", ["-m", "--color=never"]);
+
+    let stdoutBuf = "";
+    ls.stdout.on("data", (data) => {
+      const dataStr: string = "\n" + data.toString();
+
+      stdoutBuf += dataStr;
+
+      let openBracketIndex = stdoutBuf.indexOf("\n[");
+      let closingBracketIndex = stdoutBuf.indexOf("\n]");
+
+      while (openBracketIndex !== -1 && closingBracketIndex !== -1) {
+        const data = stdoutBuf.slice(openBracketIndex, closingBracketIndex + 2);
+
+        try {
+          JSON.parse(data);
+          stream.push(data);
+        } catch (e) {
+          error("FAILED TO PARSE JSON");
+          error(e);
+          error("DATA");
+          error(data);
+          break;
+        }
+
+        stdoutBuf =
+          stdoutBuf.slice(0, openBracketIndex) +
+          stdoutBuf.slice(closingBracketIndex + 2);
+
+        // try not to let newlines accumulate
+        if (stdoutBuf.trim().length === 0) {
+          stdoutBuf = "";
+          break;
+        }
+
+        openBracketIndex = stdoutBuf.indexOf("\n[");
+        closingBracketIndex = stdoutBuf.indexOf("\n]");
+      }
+    });
+
+    ls.stderr.on("data", (data) => {
+      error(`stderr: ${data}`);
+    });
+
+    ls.on("close", (code) => {
+      log(`child process exited with code ${code}`);
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(code);
+      }
+    });
+  });
+
+  return [prom, stream];
+}
+
+export function updateDump(data: string, dump: PipewireDump): void {
   let parsed: PipewireItem[];
   try {
-    parsed = Convert.toPipewireItems(stdout);
+    parsed = Convert.toPipewireItems(data);
   } catch (e) {
-    console.error("failed to parse");
-    console.error(e);
+    error("failed to parse");
+    error(e);
     throw e;
   }
 
-  const forwardLinks: NewLinks = {};
-  const reverseLinks: NewLinks = {};
-
-  const items = parsed.reduce((acc, curr) => {
-    acc[curr.id] = curr;
-    return acc;
-  }, {} as PipewireItems);
-
   parsed.forEach((curr) => {
+    dump.items[curr.id] = curr;
+  });
+
+  const forwardLinks: Links = {};
+  const reverseLinks: Links = {};
+  Object.values(dump.items).forEach((curr) => {
     if (curr.type === PipewireItemType.PipeWireInterfaceLink) {
       const inputNode = curr.info?.props?.["link.input.node"];
       const inputPort = curr.info?.props?.["link.input.port"];
@@ -74,29 +195,50 @@ export async function pipewireDump(): Promise<PipewireDump> {
 
       if (forwardLinks[fwKey] === undefined) {
         forwardLinks[fwKey] = {
-          item: items[outputNode!],
-          port: items[outputPort!],
+          item: dump.items[outputNode!],
+          port: dump.items[outputPort!],
           links: [],
         };
       }
       if (reverseLinks[rvKey] === undefined) {
         reverseLinks[rvKey] = {
-          item: items[inputNode!],
-          port: items[inputPort!],
+          item: dump.items[inputNode!],
+          port: dump.items[inputPort!],
           links: [],
         };
       }
 
-      forwardLinks[fwKey].links.push([items[inputNode!], items[inputPort!]]);
-      reverseLinks[rvKey].links.push([items[outputNode!], items[outputPort!]]);
+      forwardLinks[fwKey].links.push([
+        dump.items[inputNode!],
+        dump.items[inputPort!],
+      ]);
+      reverseLinks[rvKey].links.push([
+        dump.items[outputNode!],
+        dump.items[outputPort!],
+      ]);
     }
   });
 
-  return {
-    items,
+  dump.links.forward = forwardLinks;
+  dump.links.reverse = reverseLinks;
+}
+
+export async function pipewireDump(): Promise<PipewireDump> {
+  const [stdout, stderr] = await run("pw-dump --color=never");
+  if (stderr.length !== 0) {
+    error("ERROR");
+    error(stderr);
+    throw new Error("Failed to get pw-dump");
+  }
+
+  const dump = {
+    items: {},
     links: {
-      forward: forwardLinks,
-      reverse: reverseLinks,
+      forward: {},
+      reverse: {},
     },
   };
+
+  updateDump(stdout, dump);
+  return dump;
 }

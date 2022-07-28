@@ -1,7 +1,7 @@
 {
-  "name": "midimap",
+  "name": "pipewire-orchestrator",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "author": "Jayden Chan <jaydencn7@gmail.com>",
   "license": "GPL-3.0-only",
   "private": false,

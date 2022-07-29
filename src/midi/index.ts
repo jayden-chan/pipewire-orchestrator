@@ -103,15 +103,7 @@ export function midiNumberToEvent(num: number): MidiEventType {
   }
 }
 
-export async function amidiSend(port: string, data: ByteTriplet) {
-  const b1Str = data.b1.toString(16).padStart(2, "0");
-  const b2Str = data.b2.toString(16).padStart(2, "0");
-  const b3Str = data.b3.toString(16).padStart(2, "0");
-  const hex = `${b1Str}${b2Str}${b3Str}`;
-  await run(`amidi -p "${port}" --send-hex="${hex}"`);
-}
-
-export async function amidiSendBatched(port: string, items: ByteTriplet[]) {
+export async function amidiSend(port: string, items: ByteTriplet[]) {
   const hex = items
     .map((i) => {
       const b1Str = i.b1.toString(16).padStart(2, "0");
@@ -139,9 +131,11 @@ export function watchMidi(channel: string): [Promise<void>, Readable] {
         reject(code);
       }
     });
+
     cmd.stderr.on("data", (data) => {
       error(`amidi stderr: ${data.toString()}`);
     });
+
     cmd.stdout.on("data", (data) => {
       const lines = (data.toString() as string)
         .split(/\r?\n/g)
@@ -154,6 +148,7 @@ export function watchMidi(channel: string): [Promise<void>, Readable] {
             warn(`encountered hex line that wasn't 2 or 3 bytes long: ${line}`);
             return undefined;
           }
+
           const b1 = parseInt(line.slice(0, 2), 16);
           const b2 = parseInt(line.slice(2, 4), 16);
           const b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;

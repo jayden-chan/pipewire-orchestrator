@@ -5,7 +5,6 @@ import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log, warn } from "../logger";
 import {
   amidiSend,
-  amidiSendBatched,
   ByteTriplet,
   MidiEvent,
   midiEventToNumber,
@@ -99,7 +98,7 @@ function handleNoteOn(
       const data = setRangeLed(button, newMode, event.channel, event.note);
 
       if (data !== undefined) {
-        amidiSend(HW_MIDI, data);
+        amidiSend(HW_MIDI, [data]);
       }
     }
   } else {
@@ -119,7 +118,7 @@ function handleNoteOn(
         b2: event.note,
         b3: button.ledStates[ledStates[state.buttons[key]]],
       };
-      amidiSend(HW_MIDI, data);
+      amidiSend(HW_MIDI, [data]);
     }
   }
 }
@@ -223,7 +222,7 @@ export async function watchMidiCommand(dev: string) {
   const devMapping = apcKey25;
 
   // set up LED states on initialization
-  amidiSendBatched(
+  amidiSend(
     HW_MIDI,
     BINDINGS_ENTRIES.map(([key, binding]) => {
       const devKey = Object.entries(devMapping.buttons).find(

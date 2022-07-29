@@ -58,13 +58,28 @@ function handleNoteOn(
   if (binding !== undefined) {
     if (binding.type === "cycle") {
       if (state.buttons[button.label] === undefined) {
-        state.buttons[button.label] = 0;
+        state.buttons[button.label] = 1;
       } else {
         state.buttons[button.label] =
           (state.buttons[button.label] + 1) % binding.items.length;
       }
 
-      binding = binding.items[state.buttons[button.label]];
+      const newBind = binding.items[state.buttons[button.label]];
+      if (newBind.color !== undefined) {
+        const data = buttonLEDBytes(
+          button,
+          newBind.color,
+          event.channel,
+          event.note
+        );
+        if (data !== undefined) {
+          amidiSend(HW_MIDI, [data]).catch((err) => {
+            error(`failed to send midi to amidi: `, err);
+          });
+        }
+      }
+
+      binding = newBind.bind;
     }
 
     if (binding.type === "command") {

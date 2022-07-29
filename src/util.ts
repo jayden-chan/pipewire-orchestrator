@@ -66,6 +66,12 @@ export function defaultLEDStates(
         return buttonLEDBytes(devKey[1], "GREEN", channel, note);
       }
 
+      if (binding.type === "cycle") {
+        const color = binding.items[0].color ?? "OFF";
+        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
+        return buttonLEDBytes(devKey[1], color, channel, note);
+      }
+
       if (binding.type === "command") {
         const onState = Object.entries(devKey[1].ledStates ?? {}).find(
           ([state]) => state === "ON"

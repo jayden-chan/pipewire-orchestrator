@@ -52,7 +52,10 @@ export type MidiBinding = {
  */
 export type CycleBinding = {
   type: "cycle";
-  items: CommandBinding[] | MidiBinding[];
+  items: {
+    bind: CommandBinding | MidiBinding;
+    color?: string;
+  }[];
 };
 
 export type ToggleMuteBinding = {

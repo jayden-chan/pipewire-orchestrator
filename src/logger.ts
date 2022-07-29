@@ -9,6 +9,16 @@ export function date() {
   return `${yy}-${MM}-${dd} ${hh}:${mm}:${ss}`;
 }
 
+export function debug(...args: any[]) {
+  if (
+    process.env.PW_ORCH_DEBUG === "1" ||
+    process.env.PW_ORCH_DEBUG === "true"
+  ) {
+    args.unshift(`[${date()}] [debug]`);
+    console.error(...args);
+  }
+}
+
 export function log(...args: any[]) {
   args.unshift(`[${date()}] [info]`);
   console.error(...args);

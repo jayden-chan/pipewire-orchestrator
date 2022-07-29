@@ -1,10 +1,15 @@
+export type Button = {
+  label: string;
+  ledStates?: {
+    [key: string]: number;
+  };
+};
+
 export type Device = {
   name: string;
   buttons: {
     // channel:note
-    [key: string]: {
-      label: string;
-    };
+    [key: string]: Button;
   };
   keys: {
     channel: number;

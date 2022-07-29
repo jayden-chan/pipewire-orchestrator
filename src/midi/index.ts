@@ -3,49 +3,110 @@ import { Readable } from "stream";
 import { error, log, warn } from "../logger";
 import { run } from "../util";
 
+export enum MidiEventType {
+  NoteOn = "NOTE_ON",
+  NoteOff = "NOTE_OFF",
+  PolyphonicAftertouch = "POLYPHONIC_AFTERTOUCH",
+  ControlChange = "CONTROL_CHANGE",
+  ProgramChange = "PROGRAM_CHANGE",
+  ChannelPressureAftertouch = "CHANNEL_PRESSURE_AFTERTOUCH",
+  PitchBend = "PITCH_BEND",
+}
+
 export type MidiEvent =
   | {
-      type: "NOTE_ON";
+      type: MidiEventType.NoteOn;
       channel: number;
       note: number;
       velocity: number;
     }
   | {
-      type: "NOTE_OFF";
+      type: MidiEventType.NoteOff;
       channel: number;
       note: number;
       velocity: number;
     }
   | {
-      type: "POLYPHONIC_AFTERTOUCH";
+      type: MidiEventType.PolyphonicAftertouch;
       channel: number;
       note: number;
       pressure: number;
     }
   | {
-      type: "CONTROL_CHANGE";
+      type: MidiEventType.ControlChange;
       channel: number;
       controller: number;
       value: number;
     }
   | {
-      type: "PROGRAM_CHANGE";
+      type: MidiEventType.ProgramChange;
       channel: number;
       program: number;
     }
   | {
-      type: "CHANNEL_PRESSURE_AFTERTOUCH";
+      type: MidiEventType.ChannelPressureAftertouch;
       channel: number;
       pressure: number;
     }
   | {
-      type: "PITCH_BEND";
+      type: MidiEventType.PitchBend;
       channel: number;
       lsb: number;
       msb: number;
     };
 
-export async function amidiSend(port: string, hex: string) {
+function midiEventToNumber(event: MidiEventType): number {
+  switch (event) {
+    case MidiEventType.NoteOn:
+      return 0b1000;
+    case MidiEventType.NoteOff:
+      return 0b1001;
+    case MidiEventType.PolyphonicAftertouch:
+      return 0b1010;
+    case MidiEventType.ControlChange:
+      return 0b1011;
+    case MidiEventType.ProgramChange:
+      return 0b1100;
+    case MidiEventType.ChannelPressureAftertouch:
+      return 0b1101;
+    case MidiEventType.PitchBend:
+      return 0b1110;
+  }
+}
+
+function midiNumberToEvent(num: number): MidiEventType {
+  switch (num) {
+    case 0b1000:
+      return MidiEventType.NoteOn;
+    case 0b1001:
+      return MidiEventType.NoteOff;
+    case 0b1010:
+      return MidiEventType.PolyphonicAftertouch;
+    case 0b1011:
+      return MidiEventType.ControlChange;
+    case 0b1100:
+      return MidiEventType.ProgramChange;
+    case 0b1101:
+      return MidiEventType.ChannelPressureAftertouch;
+    case 0b1110:
+      return MidiEventType.PitchBend;
+    default:
+      throw new Error(
+        `Unknown MIDI event type "${num.toString(16).padStart(2, "0")}" found`
+      );
+  }
+}
+
+export async function amidiSend(
+  port: string,
+  b1: number,
+  b2: number,
+  b3: number
+) {
+  const b1Str = b1.toString(16).padStart(2, "0");
+  const b2Str = b2.toString(16).padStart(2, "0");
+  const b3Str = b3.toString(16).padStart(2, "0");
+  const hex = `${b1Str}${b2Str}${b3Str}`;
   await run(`amidi -p "${port}" --send-hex="${hex}"`);
 }
 
@@ -86,41 +147,32 @@ export function watchMidi(channel: string): [Promise<void>, Readable] {
           const channel = b1 & 0b00001111;
 
           let event: MidiEvent | undefined;
-          switch (b1 >> 4) {
-            case 0b1000:
-              event = { type: "NOTE_OFF", channel, note: b2, velocity: b3 };
+          let type: MidiEventType;
+          try {
+            type = midiNumberToEvent(b1 >> 4);
+          } catch (e) {
+            return undefined;
+          }
+
+          switch (type) {
+            case MidiEventType.NoteOn:
+            case MidiEventType.NoteOff:
+              event = { type, channel, note: b2, velocity: b3 };
               break;
-            case 0b1001:
-              event = { type: "NOTE_ON", channel, note: b2, velocity: b3 };
+            case MidiEventType.PolyphonicAftertouch:
+              event = { type, channel, note: b2, pressure: b3 };
               break;
-            case 0b1010:
-              event = {
-                type: "POLYPHONIC_AFTERTOUCH",
-                channel,
-                note: b2,
-                pressure: b3,
-              };
+            case MidiEventType.ControlChange:
+              event = { type, channel, controller: b2, value: b3 };
               break;
-            case 0b1011:
-              event = {
-                type: "CONTROL_CHANGE",
-                channel,
-                controller: b2,
-                value: b3,
-              };
+            case MidiEventType.ProgramChange:
+              event = { type, channel, program: b2 };
               break;
-            case 0b1100:
-              event = { type: "PROGRAM_CHANGE", channel, program: b2 };
+            case MidiEventType.ChannelPressureAftertouch:
+              event = { type, channel, pressure: b2 };
               break;
-            case 0b1101:
-              event = {
-                type: "CHANNEL_PRESSURE_AFTERTOUCH",
-                channel,
-                pressure: b2,
-              };
-              break;
-            case 0b1110:
-              event = { type: "PITCH_BEND", channel, lsb: b2, msb: b3 };
+            case MidiEventType.PitchBend:
+              event = { type, channel, lsb: b2, msb: b3 };
               break;
           }
 

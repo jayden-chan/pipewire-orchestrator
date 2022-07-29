@@ -1,18 +1,11 @@
 import { Readable } from "stream";
-import { Bindings, DialRange, readConfig } from "../config";
-import { Button, Device, Range } from "../devices";
+import { Bindings, readConfig } from "../config";
+import { Device, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
-import { debug, error, log, warn } from "../logger";
-import {
-  amidiSend,
-  ByteTriplet,
-  MidiEvent,
-  midiEventToNumber,
-  MidiEventType,
-  watchMidi,
-} from "../midi";
+import { debug, error, log } from "../logger";
+import { amidiSend, MidiEvent, MidiEventType, watchMidi } from "../midi";
 import { midish } from "../midi/midish";
-import { run } from "../util";
+import { defaultLEDStates, run, rangeLEDBytes } from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
@@ -24,34 +17,6 @@ const MAP_FUNCTIONS = {
   SQUARED: (input: number) => input * input,
   SQRT: (input: number) => Math.sqrt(input),
 };
-
-function setRangeLed(
-  button: Button,
-  mode: DialRange,
-  channel: number,
-  note: number
-): ByteTriplet | undefined {
-  if (button.ledStates !== undefined) {
-    const requestedColor = mode.color;
-    const ledState = Object.entries(button.ledStates).find(([color]) => {
-      return color === requestedColor;
-    });
-
-    debug(`[setRangeLed]`, button, mode, channel, note);
-
-    if (ledState === undefined) {
-      warn(
-        `Button ${button.label} doesn't support requested color ${requestedColor}`
-      );
-    } else {
-      return {
-        b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
-        b2: note,
-        b3: ledState[1],
-      };
-    }
-  }
-}
 
 function handleNoteOn(
   event: MidiEvent,
@@ -95,7 +60,7 @@ function handleNoteOn(
         idx: newIdx,
       };
 
-      const data = setRangeLed(button, newMode, event.channel, event.note);
+      const data = rangeLEDBytes(button, newMode, event.channel, event.note);
 
       if (data !== undefined) {
         amidiSend(HW_MIDI, [data]);
@@ -222,39 +187,7 @@ export async function watchMidiCommand(dev: string) {
   const devMapping = apcKey25;
 
   // set up LED states on initialization
-  amidiSend(
-    HW_MIDI,
-    BINDINGS_ENTRIES.map(([key, binding]) => {
-      const devKey = Object.entries(devMapping.buttons).find(
-        ([, b]) => b.label === key
-      );
-
-      if (devKey === undefined) {
-        return undefined;
-      }
-
-      if (binding.type === "range") {
-        const mode = binding.modes[0];
-        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        return setRangeLed(devKey[1], mode, channel, note);
-      }
-
-      if (binding.type === "command") {
-        const onState = Object.entries(devKey[1].ledStates ?? {}).find(
-          ([state]) => state === "ON"
-        );
-
-        if (onState !== undefined) {
-          const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-          return {
-            b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
-            b2: note,
-            b3: onState[1],
-          };
-        }
-      }
-    }).filter((f) => f !== undefined) as ByteTriplet[]
-  );
+  amidiSend(HW_MIDI, defaultLEDStates(BINDINGS, devMapping));
 
   const state: WatchMidiState = {
     // midish "co" variable -- current output

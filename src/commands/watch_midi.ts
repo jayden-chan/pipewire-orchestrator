@@ -100,7 +100,8 @@ function handleNoteOn(
 
       if (state.mutes[binding.dial]) {
         state.mutes[binding.dial] = false;
-        controlVal = state.dials[binding.dial] ?? 0;
+        const stateVal = state.dials[binding.dial];
+        controlVal = stateVal !== undefined ? stateVal : 0;
         ledBytes = buttonLEDBytes(button, "GREEN", event.channel, event.note);
       } else {
         state.mutes[binding.dial] = true;

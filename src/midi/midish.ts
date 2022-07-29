@@ -14,17 +14,16 @@ export function midish(): [Promise<void>, Readable] {
       if (code === 0) {
         resolve();
       } else {
-        reject({
-          code,
-        });
+        reject({ code });
       }
     });
+
     cmd.stderr.on("data", (data) => {
       error(`[midish]: ${data.toString().trim()}`);
     });
 
     cmd.stdout.on("data", (data) => {
-      log(`midish: ${data.toString().trim()}`);
+      log(`[midish]: ${data.toString().trim()}`);
     });
 
     stream.on("data", (data) => {
@@ -35,11 +34,24 @@ export function midish(): [Promise<void>, Readable] {
 
       cmd.stdin.write(midishCmd, (err) => {
         if (err) {
-          reject({
-            error: err,
-          });
+          reject({ error: err });
         }
       });
+    });
+
+    const initSeq = [];
+
+    initSeq.push(`dnew 0 "14:0" rw`);
+    initSeq.push("i");
+    for (let i = 0; i < 16; i++) {
+      initSeq.push(`onew out${i} {0 ${i}}`);
+    }
+    initSeq.push("co out0");
+
+    cmd.stdin.write(initSeq.join("\n") + "\n", (err) => {
+      if (err) {
+        reject({ error: err });
+      }
     });
   });
 

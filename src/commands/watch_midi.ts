@@ -220,13 +220,6 @@ export async function watchMidiCommand(dev: string) {
   const [watchMidiProm, stream] = watchMidi(port);
   const [midishProm, midishIn] = midish();
 
-  midishIn.push(`dnew 0 "14:0" rw`);
-  midishIn.push("i");
-  for (let i = 0; i < 16; i++) {
-    midishIn.push(`onew out${i} {0 ${i}}`);
-  }
-  midishIn.push("co out0");
-
   const devMapping = apcKey25;
 
   // set up LED states on initialization

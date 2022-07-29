@@ -5,7 +5,7 @@
 ### Enable Virtual MIDI
 ```bash
 sudo modprobe snd_virmidi
-echo "snd-virmidi" | sudo tee /etc/modules
+echo "snd_virmidi" | sudo tee /etc/modules-load.d/snd-virmidi.conf
 ```
 
 ### Connect device to virtual MIDI 
@@ -22,4 +22,6 @@ aconnect <hardware device id> <virtual device id>
 - [ ] Mute controls for dials
 - [ ] Guitar amp selection with buttons
 - [ ] Microphone mute button
-- [ ] EQ selection with buttons?
+- [ ] EQ selection with buttons
+- [ ] Auto-connect gain controllers with pw-dump watcher
+- [ ] Auto-connect virtual midi devices with aconnect

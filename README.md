@@ -1,6 +1,6 @@
 # pipewire-orchestrator
 
-## Nodes
+## Notes
 
 ### Enable Virtual MIDI
 ```bash

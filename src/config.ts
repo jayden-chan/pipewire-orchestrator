@@ -46,8 +46,6 @@ export async function readConfig(path: string): Promise<Config> {
   const valid = validate(contents);
   if (!valid) {
     throw new Error("invalid schema");
-  } else {
-    console.log("valid");
   }
 
   return contents;

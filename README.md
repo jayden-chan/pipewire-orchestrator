@@ -16,7 +16,7 @@ aconnect <hardware device id> <virtual device id>
 ```
 
 ## Todo
-- [ ] Batch hex requests to amidi
+- [x] Batch hex requests to amidi
 - [ ] Dial layers
 - [ ] Shift key to turn dials without sending input
 - [ ] Mute controls for dials

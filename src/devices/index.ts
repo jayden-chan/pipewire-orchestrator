@@ -1,8 +1,15 @@
+export type Range = [number, number];
+
 export type Button = {
   label: string;
   ledStates?: {
     [key: string]: number;
   };
+};
+
+export type Dial = {
+  label: string;
+  range: Range;
 };
 
 export type Device = {
@@ -16,8 +23,6 @@ export type Device = {
   };
   dials: {
     // channel:controller
-    [key: string]: {
-      label: string;
-    };
+    [key: string]: Dial;
   };
 };

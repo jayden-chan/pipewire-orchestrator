@@ -1,13 +1,17 @@
-import { Button } from "../devices";
+import { Button, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log, warn } from "../logger";
-import { amidiSend, MidiEvent, watchMidi } from "../midi";
+import {
+  amidiSend,
+  MidiEvent,
+  midiEventToNumber,
+  MidiEventType,
+  watchMidi,
+} from "../midi";
 import { midish } from "../midi/midish";
 import { run } from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
-
-export type Range = [number, number];
 
 type Binding =
   | {
@@ -16,6 +20,7 @@ type Binding =
     }
   | {
       type: "passthrough";
+      mapFunction?: (input: number) => number;
       outChannel: number;
       outController: number;
     }
@@ -30,6 +35,19 @@ type DialRange = {
   color: string;
 };
 
+const IDENTITY = (input: any) => input;
+
+const FULL_HALF_RANGE: DialRange[] = [
+  {
+    range: [0, 1],
+    color: "GREEN",
+  },
+  {
+    range: [0, 0.5],
+    color: "AMBER",
+  },
+];
+
 const BINDINGS: Record<string, Binding> = {
   "Play/Pause": {
     type: "command",
@@ -43,133 +61,99 @@ const BINDINGS: Record<string, Binding> = {
     type: "command",
     command: "/home/jayden/.config/dotfiles/scripts/xf86.sh media Previous",
   },
-  "Button 33": {
-    type: "range",
-    dial: "Dial 1",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
-  },
-  "Button 34": {
-    type: "range",
-    dial: "Dial 2",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
-  },
-  "Button 35": {
-    type: "range",
-    dial: "Dial 3",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
-  },
-  "Button 36": {
-    type: "range",
-    dial: "Dial 4",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
-  },
   "Button 37": {
     type: "range",
-    dial: "Dial 5",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
+    dial: "Dial 1",
+    modes: FULL_HALF_RANGE,
   },
   "Button 38": {
     type: "range",
-    dial: "Dial 6",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
+    dial: "Dial 2",
+    modes: FULL_HALF_RANGE,
   },
   "Button 39": {
     type: "range",
-    dial: "Dial 7",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.5],
-        color: "AMBER",
-      },
-    ],
+    dial: "Dial 3",
+    modes: FULL_HALF_RANGE,
   },
   "Button 40": {
+    type: "range",
+    dial: "Dial 4",
+    modes: FULL_HALF_RANGE,
+  },
+  "Button 29": {
+    type: "range",
+    dial: "Dial 5",
+    modes: FULL_HALF_RANGE,
+  },
+  "Button 30": {
+    type: "range",
+    dial: "Dial 6",
+    modes: FULL_HALF_RANGE,
+  },
+  "Button 31": {
+    type: "range",
+    dial: "Dial 7",
+    modes: FULL_HALF_RANGE,
+  },
+  "Button 32": {
     type: "range",
     dial: "Dial 8",
     modes: [
       {
-        range: [0, 0.66],
+        range: [0, 1],
         color: "GREEN",
       },
       {
         range: [0, 0.33],
         color: "AMBER",
       },
-      {
-        range: [0, 1],
-        color: "RED",
-      },
     ],
   },
-  "Dial 8": {
+  "Dial 1": {
     type: "passthrough",
     outChannel: 4,
-    outController: 7,
+    outController: 16,
+  },
+  "Dial 2": {
+    type: "passthrough",
+    outChannel: 4,
+    outController: 17,
+  },
+  "Dial 3": {
+    type: "passthrough",
+    outChannel: 4,
+    outController: 18,
+  },
+  "Dial 4": {
+    type: "passthrough",
+    outChannel: 4,
+    outController: 19,
+  },
+  "Dial 5": {
+    type: "passthrough",
+    outChannel: 4,
+    outController: 80,
+  },
+  "Dial 6": {
+    type: "passthrough",
+    outChannel: 4,
+    outController: 81,
   },
   "Dial 7": {
     type: "passthrough",
     outChannel: 4,
-    outController: 8,
+    outController: 82,
+  },
+  "Dial 8": {
+    type: "passthrough",
+    mapFunction: (val) => val * val,
+    outChannel: 4,
+    outController: 83,
   },
 };
+
+const BINDINGS_ENTRIES = Object.entries(BINDINGS);
 
 function setRangeLed(
   button: Button,
@@ -233,21 +217,20 @@ export async function watchMidiCommand(dev: string) {
 
   const rangeStates: Record<string, { range: Range; idx: number }> =
     Object.fromEntries(
-      Object.values(BINDINGS)
-        .map((val) => {
-          if (val.type === "range") {
-            return [val.dial, { range: val.modes[0].range, idx: 0 }];
-          } else {
-            return undefined;
-          }
-        })
-        .filter((v) => v !== undefined) as [
+      BINDINGS_ENTRIES.map(([, val]) => {
+        if (val.type === "range") {
+          return [val.dial, { range: val.modes[0].range, idx: 0 }];
+        } else {
+          return undefined;
+        }
+      }).filter((v) => v !== undefined) as [
         string,
         { range: Range; idx: number }
       ][]
     );
 
-  Object.entries(BINDINGS).forEach(([key, binding]) => {
+  // set LED states of buttons that control dial ranges
+  BINDINGS_ENTRIES.forEach(([key, binding]) => {
     if (binding.type === "range") {
       const devKey = Object.entries(devMapping.buttons).find(
         ([, b]) => b.label === key
@@ -262,12 +245,37 @@ export async function watchMidiCommand(dev: string) {
     }
   });
 
+  // turn on LEDs of keys that are mapped to commands and only have 2 LED states
+  BINDINGS_ENTRIES.forEach(([key, binding]) => {
+    if (binding.type === "command") {
+      const devKey = Object.entries(devMapping.buttons).find(
+        ([, b]) => b.label === key
+      );
+      if (devKey === undefined || devKey[1].ledStates === undefined) {
+        return;
+      }
+
+      const onState = Object.entries(devKey[1].ledStates).find(
+        ([state]) => state === "ON"
+      );
+      if (onState !== undefined) {
+        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
+        amidiSend(
+          "hw:5,1",
+          (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
+          note,
+          onState[1]
+        );
+      }
+    }
+  });
+
   let co = "out0";
 
   stream.on("data", (data) => {
     const event = JSON.parse(data) as MidiEvent;
 
-    if (event.type === "NOTE_ON") {
+    if (event.type === MidiEventType.NoteOn) {
       const key = `${event.channel}:${event.note}`;
       const button = devMapping.buttons[key];
       if (button) {
@@ -306,32 +314,34 @@ export async function watchMidiCommand(dev: string) {
       } else if (event.channel === devMapping.keys.channel) {
         debug(`Key ${event.note} velocity ${event.velocity}`);
       }
-    } else if (event.type === "CONTROL_CHANGE") {
+    } else if (event.type === MidiEventType.ControlChange) {
       const key = `${event.channel}:${event.controller}`;
       const dial = devMapping.dials[key];
       if (dial) {
         debug(`[dial] `, dial.label, event.value);
+        let pct = event.value / (dial.range[1] - dial.range[0]);
+        if (rangeStates[dial.label] !== undefined) {
+          const [start, end] = rangeStates[dial.label].range;
+          pct = pct * (end - start) + start;
+        }
 
         const binding = BINDINGS[dial.label];
         if (binding !== undefined && binding.type === "passthrough") {
           const newCo = `out${binding.outChannel}`;
-          let pct = event.value / 127;
-          if (rangeStates[dial.label] !== undefined) {
-            const [start, end] = rangeStates[dial.label].range;
-            pct = pct * (end - start) + start;
-          }
-
-          const mapped = Math.round(pct * 16383);
+          const mappedPct = (binding.mapFunction ?? IDENTITY)(pct);
+          const mapped = Math.round(mappedPct * 16383);
           let midishCmd = `oaddev {xctl ${newCo} ${binding.outController} ${mapped}}`;
+
+          // update the current output in midish if necessary
           if (newCo !== co) {
             midishCmd = `co ${newCo}\n${midishCmd}`;
             co = newCo;
           }
-          debug(`midish out: ${midishCmd.replace(/\n/g, "<CR>")}`);
+          debug(`[midish] [cmd]: ${midishCmd.replace(/\n/g, "<CR>")}`);
           midishIn.push(midishCmd);
         }
       }
-    } else if (event.type === "NOTE_OFF") {
+    } else if (event.type === MidiEventType.NoteOff) {
       //
     } else {
       log(event);

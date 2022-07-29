@@ -55,7 +55,7 @@ export type MidiEvent =
       msb: number;
     };
 
-function midiEventToNumber(event: MidiEventType): number {
+export function midiEventToNumber(event: MidiEventType): number {
   switch (event) {
     case MidiEventType.NoteOn:
       return 0b1000;
@@ -74,7 +74,7 @@ function midiEventToNumber(event: MidiEventType): number {
   }
 }
 
-function midiNumberToEvent(num: number): MidiEventType {
+export function midiNumberToEvent(num: number): MidiEventType {
   switch (num) {
     case 0b1000:
       return MidiEventType.NoteOn;

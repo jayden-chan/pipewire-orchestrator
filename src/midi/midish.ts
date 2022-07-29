@@ -20,11 +20,11 @@ export function midish(): [Promise<void>, Readable] {
       }
     });
     cmd.stderr.on("data", (data) => {
-      error(`midish stderr: ${data.toString().trim()}`);
+      error(`[midish]: ${data.toString().trim()}`);
     });
 
     cmd.stdout.on("data", (data) => {
-      log(`midish stdout: ${data.toString().trim()}`);
+      log(`midish: ${data.toString().trim()}`);
     });
 
     stream.on("data", (data) => {

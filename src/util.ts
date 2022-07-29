@@ -1,5 +1,5 @@
 import { exec } from "child_process";
-import { Bindings, DialRange } from "./config";
+import { Bindings } from "./config";
 import { Button, Device } from "./devices";
 import { debug, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
@@ -16,24 +16,21 @@ export function run(cmd: string): Promise<[string, string]> {
   });
 }
 
-export function rangeLEDBytes(
+export function buttonLEDBytes(
   button: Button,
-  mode: DialRange,
+  color: string,
   channel: number,
   note: number
 ): ByteTriplet | undefined {
   if (button.ledStates !== undefined) {
-    const requestedColor = mode.color;
-    const ledState = Object.entries(button.ledStates).find(([color]) => {
-      return color === requestedColor;
-    });
+    const ledState = Object.entries(button.ledStates).find(
+      ([c]) => c === color
+    );
 
-    debug(`[setRangeLed]`, button, mode, channel, note);
+    debug(`[buttonLEDBytes]`, button, color, channel, note);
 
     if (ledState === undefined) {
-      warn(
-        `Button ${button.label} doesn't support requested color ${requestedColor}`
-      );
+      warn(`Button ${button.label} doesn't support requested color ${color}`);
     } else {
       return {
         b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
@@ -61,7 +58,12 @@ export function defaultLEDStates(
       if (binding.type === "range") {
         const mode = binding.modes[0];
         const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        return rangeLEDBytes(devKey[1], mode, channel, note);
+        return buttonLEDBytes(devKey[1], mode.color, channel, note);
+      }
+
+      if (binding.type === "mute") {
+        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
+        return buttonLEDBytes(devKey[1], "GREEN", channel, note);
       }
 
       if (binding.type === "command") {

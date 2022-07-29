@@ -557,6 +557,25 @@
                             "type"
                         ],
                         "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "dial": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "enum": [
+                                    "mute"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "dial",
+                            "type"
+                        ],
+                        "type": "object"
                     }
                 ]
             },

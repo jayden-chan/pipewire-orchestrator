@@ -55,11 +55,17 @@ export type CycleBinding = {
   items: CommandBinding[] | MidiBinding[];
 };
 
+export type ToggleMuteBinding = {
+  type: "mute";
+  dial: string;
+};
+
 export type Binding =
   | CommandBinding
   | PassthroughBinding
   | RangeBinding
   | MidiBinding
+  | ToggleMuteBinding
   | CycleBinding;
 
 export type Bindings = {

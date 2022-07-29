@@ -3,9 +3,15 @@ import { Bindings, readConfig } from "../config";
 import { Device, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log } from "../logger";
-import { amidiSend, MidiEvent, MidiEventType, watchMidi } from "../midi";
-import { midish } from "../midi/midish";
-import { defaultLEDStates, run, rangeLEDBytes } from "../util";
+import {
+  amidiSend,
+  ByteTriplet,
+  MidiEvent,
+  MidiEventType,
+  watchMidi,
+} from "../midi";
+import { midiEventToMidish, midish } from "../midi/midish";
+import { defaultLEDStates, run, buttonLEDBytes } from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
@@ -22,6 +28,7 @@ function handleNoteOn(
   event: MidiEvent,
   devMapping: Device,
   bindings: Bindings,
+  midishIn: Readable,
   state: WatchMidiState
 ) {
   if (event.type !== MidiEventType.NoteOn) {
@@ -47,10 +54,62 @@ function handleNoteOn(
   }
 
   debug(`[button pressed] ${button.label}`);
-  const binding = bindings[button.label];
+  let binding = bindings[button.label];
   if (binding !== undefined) {
+    if (binding.type === "cycle") {
+      if (state.buttons[button.label] === undefined) {
+        state.buttons[button.label] = 0;
+      } else {
+        state.buttons[button.label] =
+          (state.buttons[button.label] + 1) % binding.items.length;
+      }
+
+      binding = binding.items[state.buttons[button.label]];
+    }
+
     if (binding.type === "command") {
       run(binding.command);
+    } else if (binding.type === "mute") {
+      const bDial = binding.dial;
+      const dialBinding = Object.entries(bindings).find(
+        ([dial]) => dial === bDial
+      );
+
+      if (dialBinding === undefined || dialBinding[1].type !== "passthrough") {
+        error(`No matching binding for dial "${bDial}"`);
+        return;
+      }
+
+      let controlVal = 0;
+      let ledBytes: ByteTriplet | undefined = undefined;
+
+      if (state.mutes[binding.dial]) {
+        state.mutes[binding.dial] = false;
+        controlVal = state.dials[binding.dial] ?? 0;
+        ledBytes = buttonLEDBytes(button, "GREEN", event.channel, event.note);
+      } else {
+        state.mutes[binding.dial] = true;
+        ledBytes = buttonLEDBytes(button, "RED", event.channel, event.note);
+      }
+
+      midishIn.push(
+        midiEventToMidish({
+          type: MidiEventType.ControlChange,
+          channel: dialBinding[1].outChannel,
+          controller: dialBinding[1].outController,
+          value: controlVal,
+        })
+      );
+
+      if (ledBytes !== undefined) {
+        amidiSend(HW_MIDI, [ledBytes]).catch((err) => {
+          error(`failed to send midi to amidi: `, err);
+        });
+      }
+    } else if (binding.type === "midi") {
+      const ev = binding.event;
+      const midishCmd = midiEventToMidish(ev);
+      midishIn.push(midishCmd);
     } else if (binding.type === "range") {
       const newIdx =
         (state.ranges[binding.dial].idx + 1) % binding.modes.length;
@@ -60,31 +119,42 @@ function handleNoteOn(
         idx: newIdx,
       };
 
-      const data = rangeLEDBytes(button, newMode, event.channel, event.note);
+      const data = buttonLEDBytes(
+        button,
+        newMode.color,
+        event.channel,
+        event.note
+      );
 
       if (data !== undefined) {
-        amidiSend(HW_MIDI, [data]);
+        amidiSend(HW_MIDI, [data]).catch((err) => {
+          error(`failed to send midi to amidi: `, err);
+        });
       }
     }
-  } else {
-    if (button.ledStates !== undefined) {
-      const ledStates = Object.keys(button.ledStates).filter(
-        (state) => !state.includes("FLASHING")
-      );
-      const numLedStates = ledStates.length;
-      if (!state.buttons[key]) {
-        state.buttons[key] = 1;
-      } else {
-        state.buttons[key] = (state.buttons[key] + 1) % numLedStates;
-      }
 
-      const data = {
-        b1: (0b1001 << 4) | event.channel,
-        b2: event.note,
-        b3: button.ledStates[ledStates[state.buttons[key]]],
-      };
-      amidiSend(HW_MIDI, [data]);
+    return;
+  }
+
+  // default behavior for button that isn't bound to anything.
+  // just cycle through the colors
+  if (button.ledStates !== undefined) {
+    const ledStates = Object.keys(button.ledStates).filter(
+      (state) => !state.includes("FLASHING")
+    );
+    const numLedStates = ledStates.length;
+    if (!state.buttons[key]) {
+      state.buttons[key] = 1;
+    } else {
+      state.buttons[key] = (state.buttons[key] + 1) % numLedStates;
     }
+
+    const data = {
+      b1: (0b1001 << 4) | event.channel,
+      b2: event.note,
+      b3: button.ledStates[ledStates[state.buttons[key]]],
+    };
+    amidiSend(HW_MIDI, [data]);
   }
 }
 
@@ -119,7 +189,7 @@ function handleControlChange(
   }
 
   // shift key disables dials. useful for changing
-  // dial ranges without having skips output
+  // dial ranges without having skips in output
   if (state.shiftPressed) {
     return;
   }
@@ -139,25 +209,25 @@ function handleControlChange(
       const newCo = `out${binding.outChannel}`;
       const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
       const mapped = Math.round(mappedPct * 16383);
-      let midishCmd = `oaddev {xctl ${newCo} ${binding.outController} ${mapped}}`;
 
-      // update the current output in midish if necessary
-      if (newCo !== state.co) {
-        midishCmd = `co ${newCo}\n${midishCmd}`;
-        state.co = newCo;
+      state.dials[dial.label] = mapped;
+      if (!state.mutes[dial.label]) {
+        const midishCmd = `oaddev {xctl ${newCo} ${binding.outController} ${mapped}}`;
+        midishIn.push(midishCmd);
       }
-      debug(`[midish] [cmd]: ${midishCmd.replace(/\n/g, "<CR>")}`);
-      midishIn.push(midishCmd);
     }
   }
 }
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
 type ButtonStates = Record<string, number>;
+type MuteStates = Record<string, boolean>;
+type DialStates = Record<string, number>;
 type WatchMidiState = {
-  co: string;
   shiftPressed: boolean;
   ranges: RangeStates;
+  mutes: MuteStates;
+  dials: DialStates;
   buttons: ButtonStates;
 };
 
@@ -191,9 +261,10 @@ export async function watchMidiCommand(dev: string) {
 
   const state: WatchMidiState = {
     // midish "co" variable -- current output
-    co: "out0",
     shiftPressed: false,
     buttons: {},
+    mutes: {},
+    dials: {},
     ranges: Object.fromEntries(
       BINDINGS_ENTRIES.map(([, val]) => {
         if (val.type === "range") {
@@ -212,7 +283,7 @@ export async function watchMidiCommand(dev: string) {
     const event = JSON.parse(data) as MidiEvent;
 
     if (event.type === MidiEventType.NoteOn) {
-      handleNoteOn(event, devMapping, BINDINGS, state);
+      handleNoteOn(event, devMapping, BINDINGS, midishIn, state);
     } else if (event.type === MidiEventType.ControlChange) {
       handleControlChange(event, devMapping, BINDINGS, midishIn, state);
     } else if (event.type === MidiEventType.NoteOff) {

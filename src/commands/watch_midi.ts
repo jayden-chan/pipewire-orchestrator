@@ -139,6 +139,7 @@ function handleNoteOff(
     // shift key is inverted for some reason
     debug("Shift ON");
     state.shiftPressed = true;
+    return;
   }
 }
 
@@ -153,6 +154,8 @@ function handleControlChange(
     return;
   }
 
+  // shift key disables dials. useful for changing
+  // dial ranges without having skips output
   if (state.shiftPressed) {
     return;
   }

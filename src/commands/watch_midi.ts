@@ -1,8 +1,11 @@
+import { Bindings, DialRange, readConfig } from "../config";
 import { Button, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log, warn } from "../logger";
 import {
   amidiSend,
+  amidiSendBatched,
+  ByteTriplet,
   MidiEvent,
   midiEventToNumber,
   MidiEventType,
@@ -13,154 +16,18 @@ import { run } from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
-type Binding =
-  | {
-      type: "command";
-      command: string;
-    }
-  | {
-      type: "passthrough";
-      mapFunction?: (input: number) => number;
-      outChannel: number;
-      outController: number;
-    }
-  | {
-      type: "range";
-      dial: string;
-      modes: DialRange[];
-    };
-
-type DialRange = {
-  range: Range;
-  color: string;
+const MAP_FUNCTIONS = {
+  IDENTITY: (input: any) => input,
+  SQUARED: (input: number) => input * input,
+  SQRT: (input: number) => Math.sqrt(input),
 };
-
-const IDENTITY = (input: any) => input;
-
-const FULL_HALF_RANGE: DialRange[] = [
-  {
-    range: [0, 1],
-    color: "GREEN",
-  },
-  {
-    range: [0, 0.5],
-    color: "AMBER",
-  },
-];
-
-const BINDINGS: Record<string, Binding> = {
-  "Play/Pause": {
-    type: "command",
-    command: "/home/jayden/.config/dotfiles/scripts/xf86.sh media PlayPause",
-  },
-  Right: {
-    type: "command",
-    command: "/home/jayden/.config/dotfiles/scripts/xf86.sh media Next",
-  },
-  Left: {
-    type: "command",
-    command: "/home/jayden/.config/dotfiles/scripts/xf86.sh media Previous",
-  },
-  "Button 37": {
-    type: "range",
-    dial: "Dial 1",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 38": {
-    type: "range",
-    dial: "Dial 2",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 39": {
-    type: "range",
-    dial: "Dial 3",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 40": {
-    type: "range",
-    dial: "Dial 4",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 29": {
-    type: "range",
-    dial: "Dial 5",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 30": {
-    type: "range",
-    dial: "Dial 6",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 31": {
-    type: "range",
-    dial: "Dial 7",
-    modes: FULL_HALF_RANGE,
-  },
-  "Button 32": {
-    type: "range",
-    dial: "Dial 8",
-    modes: [
-      {
-        range: [0, 1],
-        color: "GREEN",
-      },
-      {
-        range: [0, 0.33],
-        color: "AMBER",
-      },
-    ],
-  },
-  "Dial 1": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 16,
-  },
-  "Dial 2": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 17,
-  },
-  "Dial 3": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 18,
-  },
-  "Dial 4": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 19,
-  },
-  "Dial 5": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 80,
-  },
-  "Dial 6": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 81,
-  },
-  "Dial 7": {
-    type: "passthrough",
-    outChannel: 4,
-    outController: 82,
-  },
-  "Dial 8": {
-    type: "passthrough",
-    mapFunction: (val) => val * val,
-    outChannel: 4,
-    outController: 83,
-  },
-};
-
-const BINDINGS_ENTRIES = Object.entries(BINDINGS);
 
 function setRangeLed(
   button: Button,
   mode: DialRange,
   channel: number,
   note: number
-) {
+): ByteTriplet | undefined {
   if (button.ledStates !== undefined) {
     const requestedColor = mode.color;
     const ledState = Object.entries(button.ledStates).find(([color]) => {
@@ -174,7 +41,11 @@ function setRangeLed(
         `Button ${button.label} doesn't support requested color ${requestedColor}`
       );
     } else {
-      amidiSend("hw:5,1", (0b1001 << 4) | channel, note, ledState[1]);
+      return {
+        b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
+        b2: note,
+        b3: ledState[1],
+      };
     }
   }
 }
@@ -182,6 +53,10 @@ function setRangeLed(
 export async function watchMidiCommand(dev: string) {
   const [amidil] = await run("amidi --list-devices");
   const foundPort = amidil.split(/\r?\n/g).find((line) => line.includes(dev));
+
+  const config = await readConfig("./config.json");
+  const BINDINGS = config.bindings;
+  const BINDINGS_ENTRIES = Object.entries(BINDINGS);
 
   if (foundPort === undefined) {
     error(`Unable to locate device "${dev}"`);
@@ -199,15 +74,9 @@ export async function watchMidiCommand(dev: string) {
 
   midishIn.push(`dnew 0 "14:0" rw`);
   midishIn.push("i");
-  midishIn.push("onew out0 {0 0}");
-  midishIn.push("onew out1 {0 1}");
-  midishIn.push("onew out2 {0 2}");
-  midishIn.push("onew out3 {0 3}");
-  midishIn.push("onew out4 {0 4}");
-  midishIn.push("onew out5 {0 5}");
-  midishIn.push("onew out6 {0 6}");
-  midishIn.push("onew out7 {0 7}");
-  midishIn.push("onew out8 {0 8}");
+  for (let i = 0; i < 16; i++) {
+    midishIn.push(`onew out${i} {0 ${i}}`);
+  }
   midishIn.push("co out0");
 
   const devMapping = apcKey25;
@@ -230,45 +99,51 @@ export async function watchMidiCommand(dev: string) {
     );
 
   // set LED states of buttons that control dial ranges
-  BINDINGS_ENTRIES.forEach(([key, binding]) => {
-    if (binding.type === "range") {
-      const devKey = Object.entries(devMapping.buttons).find(
-        ([, b]) => b.label === key
-      );
-      if (devKey === undefined) {
-        return;
-      }
+  amidiSendBatched(
+    "hw:5,1",
+    BINDINGS_ENTRIES.map(([key, binding]) => {
+      if (binding.type === "range") {
+        const devKey = Object.entries(devMapping.buttons).find(
+          ([, b]) => b.label === key
+        );
+        if (devKey === undefined) {
+          return undefined;
+        }
 
-      const mode = binding.modes[0];
-      const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-      setRangeLed(devKey[1], mode, channel, note);
-    }
-  });
+        const mode = binding.modes[0];
+        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
+        return setRangeLed(devKey[1], mode, channel, note);
+      }
+    }).filter((f) => f !== undefined) as ByteTriplet[]
+  );
 
   // turn on LEDs of keys that are mapped to commands and only have 2 LED states
-  BINDINGS_ENTRIES.forEach(([key, binding]) => {
-    if (binding.type === "command") {
-      const devKey = Object.entries(devMapping.buttons).find(
-        ([, b]) => b.label === key
-      );
-      if (devKey === undefined || devKey[1].ledStates === undefined) {
-        return;
-      }
-
-      const onState = Object.entries(devKey[1].ledStates).find(
-        ([state]) => state === "ON"
-      );
-      if (onState !== undefined) {
-        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        amidiSend(
-          "hw:5,1",
-          (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
-          note,
-          onState[1]
+  amidiSendBatched(
+    "hw:5,1",
+    BINDINGS_ENTRIES.map(([key, binding]) => {
+      if (binding.type === "command") {
+        const devKey = Object.entries(devMapping.buttons).find(
+          ([, b]) => b.label === key
         );
+        if (devKey === undefined || devKey[1].ledStates === undefined) {
+          return undefined;
+        }
+
+        const onState = Object.entries(devKey[1].ledStates).find(
+          ([state]) => state === "ON"
+        );
+        if (onState !== undefined) {
+          const [channel, note] = devKey[0].split(":").map((n) => Number(n));
+          return {
+            b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
+            b2: note,
+            b3: onState[1],
+          };
+        }
       }
-    }
-  });
+      // typescript isn't smart enough to take into account this undefined filtering step
+    }).filter((i) => i !== undefined) as ByteTriplet[]
+  );
 
   let co = "out0";
 
@@ -307,8 +182,12 @@ export async function watchMidiCommand(dev: string) {
               buttonStates[key] = (buttonStates[key] + 1) % numLedStates;
             }
 
-            const b3 = button.ledStates[ledStates[buttonStates[key]]];
-            amidiSend("hw:5,1", (0b1001 << 4) | event.channel, event.note, b3);
+            const data = {
+              b1: (0b1001 << 4) | event.channel,
+              b2: event.note,
+              b3: button.ledStates[ledStates[buttonStates[key]]],
+            };
+            amidiSend("hw:5,1", data);
           }
         }
       } else if (event.channel === devMapping.keys.channel) {
@@ -328,7 +207,8 @@ export async function watchMidiCommand(dev: string) {
         const binding = BINDINGS[dial.label];
         if (binding !== undefined && binding.type === "passthrough") {
           const newCo = `out${binding.outChannel}`;
-          const mappedPct = (binding.mapFunction ?? IDENTITY)(pct);
+          const mappedPct =
+            MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
           const mapped = Math.round(mappedPct * 16383);
           let midishCmd = `oaddev {xctl ${newCo} ${binding.outController} ${mapped}}`;
 

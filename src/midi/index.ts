@@ -1,7 +1,13 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { error, log, warn } from "../logger";
+import { debug, error, log, warn } from "../logger";
 import { run } from "../util";
+
+export type ByteTriplet = {
+  b1: number;
+  b2: number;
+  b3: number;
+};
 
 export enum MidiEventType {
   NoteOn = "NOTE_ON",
@@ -97,16 +103,24 @@ export function midiNumberToEvent(num: number): MidiEventType {
   }
 }
 
-export async function amidiSend(
-  port: string,
-  b1: number,
-  b2: number,
-  b3: number
-) {
-  const b1Str = b1.toString(16).padStart(2, "0");
-  const b2Str = b2.toString(16).padStart(2, "0");
-  const b3Str = b3.toString(16).padStart(2, "0");
+export async function amidiSend(port: string, data: ByteTriplet) {
+  const b1Str = data.b1.toString(16).padStart(2, "0");
+  const b2Str = data.b2.toString(16).padStart(2, "0");
+  const b3Str = data.b3.toString(16).padStart(2, "0");
   const hex = `${b1Str}${b2Str}${b3Str}`;
+  await run(`amidi -p "${port}" --send-hex="${hex}"`);
+}
+
+export async function amidiSendBatched(port: string, items: ByteTriplet[]) {
+  const hex = items
+    .map((i) => {
+      const b1Str = i.b1.toString(16).padStart(2, "0");
+      const b2Str = i.b2.toString(16).padStart(2, "0");
+      const b3Str = i.b3.toString(16).padStart(2, "0");
+      return `${b1Str}${b2Str}${b3Str}`;
+    })
+    .join("");
+  debug(hex);
   await run(`amidi -p "${port}" --send-hex="${hex}"`);
 }
 

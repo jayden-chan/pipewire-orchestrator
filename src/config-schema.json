@@ -1,0 +1,117 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "bindings": {
+            "additionalProperties": {
+                "anyOf": [
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "command": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "enum": [
+                                    "command"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "command",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "mapFunction": {
+                                "enum": [
+                                    "IDENTITY",
+                                    "SQRT",
+                                    "SQUARED"
+                                ],
+                                "type": "string"
+                            },
+                            "outChannel": {
+                                "type": "number"
+                            },
+                            "outController": {
+                                "type": "number"
+                            },
+                            "type": {
+                                "enum": [
+                                    "passthrough"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "outChannel",
+                            "outController",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "dial": {
+                                "type": "string"
+                            },
+                            "modes": {
+                                "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "color": {
+                                            "type": "string"
+                                        },
+                                        "range": {
+                                            "items": [
+                                                {
+                                                    "type": "number"
+                                                },
+                                                {
+                                                    "type": "number"
+                                                }
+                                            ],
+                                            "maxItems": 2,
+                                            "minItems": 2,
+                                            "type": "array"
+                                        }
+                                    },
+                                    "required": [
+                                        "color",
+                                        "range"
+                                    ],
+                                    "type": "object"
+                                },
+                                "type": "array"
+                            },
+                            "type": {
+                                "enum": [
+                                    "range"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "dial",
+                            "modes",
+                            "type"
+                        ],
+                        "type": "object"
+                    }
+                ]
+            },
+            "type": "object"
+        }
+    },
+    "required": [
+        "bindings"
+    ],
+    "type": "object"
+}
+

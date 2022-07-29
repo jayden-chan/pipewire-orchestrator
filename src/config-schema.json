@@ -7,6 +7,7 @@
                 "anyOf": [
                     {
                         "additionalProperties": false,
+                        "description": "Execute a shell command when the binding is activated",
                         "properties": {
                             "command": {
                                 "type": "string"
@@ -26,6 +27,7 @@
                     },
                     {
                         "additionalProperties": false,
+                        "description": "Pass through the MIDI input to the given channel and controller,\noptionally passing the input through the mapping function first",
                         "properties": {
                             "mapFunction": {
                                 "enum": [
@@ -57,6 +59,7 @@
                     },
                     {
                         "additionalProperties": false,
+                        "description": "Change the range of a dial when the binding is executed",
                         "properties": {
                             "dial": {
                                 "type": "string"
@@ -100,6 +103,457 @@
                         "required": [
                             "dial",
                             "modes",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "description": "Emit a MIDI event when the binding is activated",
+                        "properties": {
+                            "event": {
+                                "anyOf": [
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "note": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "NOTE_ON"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "velocity": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "note",
+                                            "type",
+                                            "velocity"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "note": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "NOTE_OFF"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "velocity": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "note",
+                                            "type",
+                                            "velocity"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "note": {
+                                                "type": "number"
+                                            },
+                                            "pressure": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "POLYPHONIC_AFTERTOUCH"
+                                                ],
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "note",
+                                            "pressure",
+                                            "type"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "controller": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "CONTROL_CHANGE"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "controller",
+                                            "type",
+                                            "value"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "program": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "PROGRAM_CHANGE"
+                                                ],
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "program",
+                                            "type"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "pressure": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "CHANNEL_PRESSURE_AFTERTOUCH"
+                                                ],
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "pressure",
+                                            "type"
+                                        ],
+                                        "type": "object"
+                                    },
+                                    {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "channel": {
+                                                "type": "number"
+                                            },
+                                            "lsb": {
+                                                "type": "number"
+                                            },
+                                            "msb": {
+                                                "type": "number"
+                                            },
+                                            "type": {
+                                                "enum": [
+                                                    "PITCH_BEND"
+                                                ],
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "channel",
+                                            "lsb",
+                                            "msb",
+                                            "type"
+                                        ],
+                                        "type": "object"
+                                    }
+                                ]
+                            },
+                            "type": {
+                                "enum": [
+                                    "midi"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "event",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "description": "Cycle through the given sub-bindings each time the binding\nis activated",
+                        "properties": {
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "items": {
+                                            "additionalProperties": false,
+                                            "description": "Execute a shell command when the binding is activated",
+                                            "properties": {
+                                                "command": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "command"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "command",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        "type": "array"
+                                    },
+                                    {
+                                        "items": {
+                                            "additionalProperties": false,
+                                            "description": "Emit a MIDI event when the binding is activated",
+                                            "properties": {
+                                                "event": {
+                                                    "anyOf": [
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "note": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "NOTE_ON"
+                                                                    ],
+                                                                    "type": "string"
+                                                                },
+                                                                "velocity": {
+                                                                    "type": "number"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "note",
+                                                                "type",
+                                                                "velocity"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "note": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "NOTE_OFF"
+                                                                    ],
+                                                                    "type": "string"
+                                                                },
+                                                                "velocity": {
+                                                                    "type": "number"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "note",
+                                                                "type",
+                                                                "velocity"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "note": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pressure": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "POLYPHONIC_AFTERTOUCH"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "note",
+                                                                "pressure",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "controller": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "CONTROL_CHANGE"
+                                                                    ],
+                                                                    "type": "string"
+                                                                },
+                                                                "value": {
+                                                                    "type": "number"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "controller",
+                                                                "type",
+                                                                "value"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "program": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "PROGRAM_CHANGE"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "program",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pressure": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "CHANNEL_PRESSURE_AFTERTOUCH"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "pressure",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "lsb": {
+                                                                    "type": "number"
+                                                                },
+                                                                "msb": {
+                                                                    "type": "number"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "PITCH_BEND"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "lsb",
+                                                                "msb",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        }
+                                                    ]
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "midi"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "event",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        "type": "array"
+                                    }
+                                ]
+                            },
+                            "type": {
+                                "enum": [
+                                    "cycle"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "items",
                             "type"
                         ],
                         "type": "object"

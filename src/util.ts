@@ -33,7 +33,7 @@ export function buttonLEDBytes(
       warn(`Button ${button.label} doesn't support requested color ${color}`);
     } else {
       return {
-        b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
+        b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
         b2: note,
         b3: ledState[1],
       };
@@ -80,7 +80,7 @@ export function defaultLEDStates(
         if (onState !== undefined) {
           const [channel, note] = devKey[0].split(":").map((n) => Number(n));
           return {
-            b1: (midiEventToNumber(MidiEventType.NoteOff) << 4) | channel,
+            b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
             b2: note,
             b3: onState[1],
           };

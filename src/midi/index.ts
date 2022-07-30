@@ -63,9 +63,9 @@ export type MidiEvent =
 
 export function midiEventToNumber(event: MidiEventType): number {
   switch (event) {
-    case MidiEventType.NoteOn:
-      return 0b1000;
     case MidiEventType.NoteOff:
+      return 0b1000;
+    case MidiEventType.NoteOn:
       return 0b1001;
     case MidiEventType.PolyphonicAftertouch:
       return 0b1010;
@@ -83,9 +83,9 @@ export function midiEventToNumber(event: MidiEventType): number {
 export function midiNumberToEvent(num: number): MidiEventType {
   switch (num) {
     case 0b1000:
-      return MidiEventType.NoteOn;
-    case 0b1001:
       return MidiEventType.NoteOff;
+    case 0b1001:
+      return MidiEventType.NoteOn;
     case 0b1010:
       return MidiEventType.PolyphonicAftertouch;
     case 0b1011:
@@ -112,7 +112,7 @@ export async function amidiSend(port: string, items: ByteTriplet[]) {
       return `${b1Str}${b2Str}${b3Str}`;
     })
     .join("");
-  debug(hex);
+  debug(`[amidiSend]`, hex);
   await run(`amidi -p "${port}" --send-hex="${hex}"`);
 }
 

@@ -30,11 +30,18 @@ export type NodeAndPort = {
   port: string;
 };
 
-export async function ensureLink(
+export function findLinkPair(
   src: NodeAndPort,
   dest: NodeAndPort,
   dump: PipewireDump
-): Promise<void> {
+):
+  | {
+      srcNode: PipewireItem;
+      srcPort: PipewireItem;
+      destNode: PipewireItem;
+      destPort: PipewireItem;
+    }
+  | undefined {
   const items = Object.values(dump.items);
   const srcNode = items.find(
     (item) =>
@@ -44,7 +51,7 @@ export async function ensureLink(
 
   if (srcNode === undefined) {
     warn("failed to find src node");
-    return;
+    return undefined;
   }
 
   const destNode = items.find(
@@ -55,7 +62,7 @@ export async function ensureLink(
 
   if (destNode === undefined) {
     warn("failed to find dest node");
-    return;
+    return undefined;
   }
 
   const srcPort = items.find(
@@ -67,7 +74,7 @@ export async function ensureLink(
 
   if (srcPort === undefined) {
     warn("failed to locate src port");
-    return;
+    return undefined;
   }
 
   const destPort = items.find(
@@ -79,18 +86,50 @@ export async function ensureLink(
 
   if (destPort === undefined) {
     warn("failed to locate dest port");
+    return undefined;
+  }
+
+  return { srcNode, srcPort, destNode, destPort };
+}
+
+async function modifyLink(
+  src: NodeAndPort,
+  dest: NodeAndPort,
+  dump: PipewireDump,
+  mode: "ENSURE" | "DESTROY"
+): Promise<void> {
+  const linkItems = findLinkPair(src, dest, dump);
+  if (linkItems === undefined) {
     return;
   }
 
+  const { srcNode, srcPort, destNode } = linkItems;
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
   if (
     srcLinks === undefined ||
     !srcLinks.links.some((link) => link[0].id === destNode.id)
   ) {
-    const command = `pw-link "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    const flags = mode === "DESTROY" ? "-d" : "";
+    const command = `pw-link ${flags} "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
     log(`[command] ${command}`);
     await run(command);
   }
+}
+
+export async function ensureLink(
+  src: NodeAndPort,
+  dest: NodeAndPort,
+  dump: PipewireDump
+): Promise<void> {
+  await modifyLink(src, dest, dump, "ENSURE");
+}
+
+export async function destroyLink(
+  src: NodeAndPort,
+  dest: NodeAndPort,
+  dump: PipewireDump
+): Promise<void> {
+  await modifyLink(src, dest, dump, "DESTROY");
 }
 
 export function watchPwDump(): [Promise<void>, Readable] {

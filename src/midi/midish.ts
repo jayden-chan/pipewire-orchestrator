@@ -85,6 +85,9 @@ export function midish(): [Promise<void>, Readable] {
 
     const initSeq = [];
 
+    // set up the midish output device and
+    // output channels 1-16 (0-indexed)
+    // TODO: stop hard-coding the output device
     initSeq.push(`dnew 0 "14:0" rw`);
     initSeq.push("i");
     for (let i = 0; i < 16; i++) {

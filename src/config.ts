@@ -43,7 +43,7 @@ export type RangeBinding = {
  */
 export type MidiBinding = {
   type: "midi";
-  event: MidiEvent;
+  events: MidiEvent[];
 };
 
 /**
@@ -58,6 +58,25 @@ export type CycleBinding = {
   }[];
 };
 
+/**
+ * Specify binds for the press and release events
+ * of a given button
+ */
+export type MomentaryBinding = {
+  type: "momentary";
+  onPress: {
+    color?: string;
+    bind: CommandBinding | MidiBinding;
+  };
+  onRelease: {
+    color?: string;
+    bind: CommandBinding | MidiBinding;
+  };
+};
+
+/**
+ * Toggle mute for the given dial
+ */
 export type ToggleMuteBinding = {
   type: "mute";
   dial: string;
@@ -69,7 +88,8 @@ export type Binding =
   | RangeBinding
   | MidiBinding
   | ToggleMuteBinding
-  | CycleBinding;
+  | CycleBinding
+  | MomentaryBinding;
 
 export type Bindings = {
   [key: string]: Binding;

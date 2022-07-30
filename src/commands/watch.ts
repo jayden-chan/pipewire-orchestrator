@@ -26,7 +26,6 @@ export async function watch() {
   let timeoutHandle: NodeJS.Timeout | undefined = undefined;
 
   stream.on("data", (data) => {
-    console.error("-".repeat(150));
     updateDump(data.toString(), dump);
 
     if (timeoutHandle !== undefined) {

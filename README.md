@@ -27,3 +27,5 @@ aconnect <hardware device id> <virtual device id>
 - [ ] Auto-connect virtual midi devices with aconnect
 - [ ] Add TCP RPC
 - [ ] Combine MIDI and Pipewire watch modes
+- [ ] Use shift/other modifier key to open popup dialog for assigning dial to application
+- [ ] Add long press/momentary push functionality

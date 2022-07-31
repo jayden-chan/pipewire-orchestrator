@@ -20,8 +20,7 @@ export function midiEventToMidish(event: MidiEvent): string {
       }
       break;
     case MidiEventType.ProgramChange:
-      // is this right? dunno
-      cmd = `oaddev {rpn out${event.channel} ${event.program}}`;
+      cmd = `oaddev {xpc out${event.channel} ${event.program}}`;
       break;
     case MidiEventType.ChannelPressureAftertouch:
       cmd = `oaddev {cat out${event.channel} ${event.pressure}}`;

@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { exec, ExecException } from "child_process";
 import { Bindings } from "./config";
 import { Button, Device } from "./devices";
 import { debug, error, warn } from "./logger";
@@ -6,6 +6,12 @@ import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 
 const PORT_RE = /client (\d+): '(.*?)'/;
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
+
+export type RunCommandError = {
+  error: ExecException;
+  stdout: string;
+  stderr: string;
+};
 
 export function run(cmd: string): Promise<[string, string]> {
   return new Promise((resolve, reject) => {
@@ -59,9 +65,8 @@ export async function connectMidiDevices(
     debug("[connectMidiDevices]", command);
     await run(command);
   } catch (e) {
-    // TODO: fix this later
-    // @ts-ignore
-    if (e.stderr.trim() !== "Connection is already subscribed") {
+    const error = e as RunCommandError;
+    if (error.stderr.trim() !== "Connection is already subscribed") {
       debug(e);
       throw e;
     }

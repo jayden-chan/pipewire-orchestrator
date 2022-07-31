@@ -29,6 +29,9 @@ const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
 };
 
+const handleAmidiError = (err: any) =>
+  error("failed to send midi to amidi:", err);
+
 function handleBinding(
   event: MidiEvent,
   binding: Binding,
@@ -89,9 +92,7 @@ function handleBinding(
     );
 
     if (ledBytes !== undefined) {
-      amidiSend(config.virtMidi, [ledBytes]).catch((err) => {
-        error("failed to send midi to amidi:", err);
-      });
+      amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
     }
 
     return;
@@ -113,9 +114,7 @@ function handleBinding(
     );
 
     if (data !== undefined) {
-      amidiSend(config.virtMidi, [data]).catch((err) => {
-        error("failed to send midi to amidi:", err);
-      });
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
     }
   }
 }
@@ -175,9 +174,7 @@ function handleNoteOn(
     if (setColor !== undefined) {
       const data = buttonLEDBytes(button, setColor, event.channel, event.note);
       if (data !== undefined) {
-        amidiSend(config.virtMidi, [data]).catch((err) => {
-          error("failed to send midi to amidi:", err);
-        });
+        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
       }
     }
 
@@ -237,9 +234,7 @@ function handleNoteOff(
     if (color !== undefined) {
       const data = buttonLEDBytes(button, color, event.channel, event.note);
       if (data !== undefined) {
-        amidiSend(config.virtMidi, [data]).catch((err) => {
-          error("failed to send midi to amidi:", err);
-        });
+        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
       }
     }
 
@@ -336,13 +331,11 @@ export async function watchMidiCommand(configPath: string) {
     dials: {},
     ranges: Object.fromEntries(
       Object.entries(config.bindings)
-        .map(([, val]) => {
-          if (val.type === "range") {
-            return [val.dial, { range: val.modes[0].range, idx: 0 }];
-          } else {
-            return undefined;
-          }
-        })
+        .map(([, val]) =>
+          val.type === "range"
+            ? [val.dial, { range: val.modes[0].range, idx: 0 }]
+            : undefined
+        )
         .filter((v) => v !== undefined) as [
         string,
         { range: Range; idx: number }

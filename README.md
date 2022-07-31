@@ -26,7 +26,7 @@ aconnect <virtual device id> <hardware device id>
 - [ ] Auto-connect gain controllers with pw-dump watcher
 - [x] Auto-connect virtual midi devices with aconnect
 - [ ] Add TCP RPC
-- [ ] Combine MIDI and Pipewire watch modes
+- [x] Combine MIDI and Pipewire watch modes
 - [ ] Use shift/other modifier key to open popup dialog for assigning dial to application
 - [ ] Add long press/momentary push functionality
 - [ ] Request parameter dump from midi device on startup

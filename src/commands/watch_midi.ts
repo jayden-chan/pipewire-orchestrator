@@ -11,6 +11,8 @@ import {
   watchMidi,
 } from "../midi";
 import { midiEventToMidish, midish } from "../midi/midish";
+import { ensureLink, PipewireDump, updateDump, watchPwDump } from "../pipewire";
+import { PipewireItemType } from "../pipewire/types";
 import {
   defaultLEDStates,
   run,
@@ -18,6 +20,14 @@ import {
   connectMidiDevices,
   findDevicePort,
 } from "../util";
+
+const UPDATE_HOOK_TIMEOUT_MS = 300;
+const QC35_NAME = "Bose QuietComfort 35";
+const QC35_EQ_NAME = "LSP Parametric EQ x16 Stereo (QC35)";
+const QC35_EQ_L = { node: QC35_EQ_NAME, port: "Output L" };
+const QC35_EQ_R = { node: QC35_EQ_NAME, port: "Output R" };
+const QC35_L = { node: QC35_NAME, port: "playback_FL" };
+const QC35_R = { node: QC35_NAME, port: "playback_FR" };
 
 const MAP_FUNCTIONS = {
   IDENTITY: (input: any) => input,
@@ -302,6 +312,7 @@ type WatchMidiState = {
   mutes: MuteStates;
   dials: DialStates;
   buttons: ButtonStates;
+  pipewire: PipewireDump;
 };
 
 export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
@@ -320,6 +331,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   }
 
   const [watchMidiProm, stream] = watchMidi(devicePort);
+  const [pipewireProm, pipewire] = watchPwDump();
   const [midishProm, midishIn] = midish();
 
   const devMapping = DEVICE_CONFS[dev];
@@ -336,6 +348,13 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     buttons: {},
     mutes: {},
     dials: {},
+    pipewire: {
+      items: {},
+      links: {
+        forward: {},
+        reverse: {},
+      },
+    },
     ranges: Object.fromEntries(
       Object.entries(config.bindings)
         .map(([, val]) =>
@@ -349,6 +368,44 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
       ][]
     ),
   };
+
+  let prevHadQC35 = false;
+
+  let pipewireTimeout: NodeJS.Timeout | undefined = undefined;
+
+  pipewire.on("data", (data) => {
+    updateDump(data.toString(), state.pipewire);
+
+    if (pipewireTimeout !== undefined) {
+      pipewireTimeout.refresh();
+    } else {
+      pipewireTimeout = setTimeout(() => {
+        debug("running update hook");
+        const hasQC35 = Object.values(state.pipewire.items).some(
+          (item) =>
+            item.type === PipewireItemType.PipeWireInterfaceNode &&
+            item.info?.props?.["node.description"] === QC35_NAME
+        );
+
+        if (!prevHadQC35 && hasQC35) {
+          Promise.all([
+            ensureLink(QC35_EQ_L, QC35_L, state.pipewire),
+            ensureLink(QC35_EQ_R, QC35_R, state.pipewire),
+          ]).catch((err) => {
+            error(err);
+            if (err instanceof Error) {
+              if (!err.message.includes("failed to link ports: File exists")) {
+                throw err;
+              }
+            }
+          });
+        }
+
+        prevHadQC35 = hasQC35;
+        pipewireTimeout = undefined;
+      }, UPDATE_HOOK_TIMEOUT_MS);
+    }
+  });
 
   stream.on("data", (data) => {
     const event = JSON.parse(data) as MidiEvent;
@@ -370,7 +427,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   });
 
   try {
-    await Promise.race([watchMidiProm, midishProm]);
+    await Promise.race([watchMidiProm, pipewireProm, midishProm]);
     return 0;
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);

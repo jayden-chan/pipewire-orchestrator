@@ -703,6 +703,55 @@
                                                         },
                                                         "type": {
                                                             "enum": [
+                                                                "pipewire::exclusive_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "dest",
+                                                        "src",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "dest": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "src": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
                                                                 "pipewire::unlink"
                                                             ],
                                                             "type": "string"
@@ -1087,6 +1136,55 @@
                                                         "type": {
                                                             "enum": [
                                                                 "pipewire::link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "dest",
+                                                        "src",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "dest": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "src": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::exclusive_link"
                                                             ],
                                                             "type": "string"
                                                         }
@@ -1547,6 +1645,55 @@
                                                         },
                                                         "type": {
                                                             "enum": [
+                                                                "pipewire::exclusive_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "dest",
+                                                        "src",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "dest": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "src": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
                                                                 "pipewire::unlink"
                                                             ],
                                                             "type": "string"
@@ -1641,6 +1788,55 @@
                             "type": {
                                 "enum": [
                                     "pipewire::link"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "dest",
+                            "src",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "dest": {
+                                "additionalProperties": false,
+                                "properties": {
+                                    "node": {
+                                        "type": "string"
+                                    },
+                                    "port": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "node",
+                                    "port"
+                                ],
+                                "type": "object"
+                            },
+                            "src": {
+                                "additionalProperties": false,
+                                "properties": {
+                                    "node": {
+                                        "type": "string"
+                                    },
+                                    "port": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "node",
+                                    "port"
+                                ],
+                                "type": "object"
+                            },
+                            "type": {
+                                "enum": [
+                                    "pipewire::exclusive_link"
                                 ],
                                 "type": "string"
                             }
@@ -2118,6 +2314,55 @@
                                                         },
                                                         "type": {
                                                             "enum": [
+                                                                "pipewire::exclusive_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "dest",
+                                                        "src",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "dest": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "src": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
                                                                 "pipewire::unlink"
                                                             ],
                                                             "type": "string"
@@ -2486,6 +2731,55 @@
                                                         "type": {
                                                             "enum": [
                                                                 "pipewire::link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "dest",
+                                                        "src",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "dest": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "src": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                                "node": {
+                                                                    "type": "string"
+                                                                },
+                                                                "port": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "node",
+                                                                "port"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::exclusive_link"
                                                             ],
                                                             "type": "string"
                                                         }

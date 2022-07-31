@@ -14,6 +14,7 @@ import { midiEventToMidish, midish } from "../midi/midish";
 import {
   destroyLink,
   ensureLink,
+  exclusiveLink,
   findPwNode,
   PipewireDump,
   updateDump,
@@ -42,7 +43,7 @@ const DEVICE_CONFS: Record<string, Device> = {
 const handleAmidiError = (err: any) =>
   error("failed to send midi to amidi:", err);
 
-const handlePwLinkError = (err: any) => {
+export const handlePwLinkError = (err: any) => {
   if (err instanceof Error) {
     if (
       !err.message.includes(
@@ -91,15 +92,24 @@ function handleBinding(
   }
 
   if (binding.type === "pipewire::link") {
-    ensureLink(binding.src, binding.dest, state.pipewire).catch(
+    ensureLink(binding.src, binding.dest, state.pipewire.state).catch(
       handlePwLinkError
     );
+    return;
   }
 
   if (binding.type === "pipewire::unlink") {
-    destroyLink(binding.src, binding.dest, state.pipewire).catch(
+    destroyLink(binding.src, binding.dest, state.pipewire.state).catch(
       handlePwLinkError
     );
+    return;
+  }
+
+  if (binding.type === "pipewire::exclusive_link") {
+    exclusiveLink(binding.src, binding.dest, state.pipewire.state).catch(
+      handlePwLinkError
+    );
+    return;
   }
 
   if (binding.type === "mute") {
@@ -345,7 +355,10 @@ type WatchMidiState = {
   mutes: MuteStates;
   dials: DialStates;
   buttons: ButtonStates;
-  pipewire: PipewireDump;
+  pipewire: {
+    state: PipewireDump;
+    prevDevices: Record<string, boolean>;
+  };
 };
 
 export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
@@ -382,10 +395,16 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     mutes: {},
     dials: {},
     pipewire: {
-      items: {},
-      links: {
-        forward: {},
-        reverse: {},
+      prevDevices: Object.fromEntries([
+        ...config.pipewire.rules.onConnect.map((rule) => [rule.node, false]),
+        ...config.pipewire.rules.onDisconnect.map((rule) => [rule.node, true]),
+      ]),
+      state: {
+        items: {},
+        links: {
+          forward: {},
+          reverse: {},
+        },
       },
     },
     ranges: Object.fromEntries(
@@ -403,21 +422,17 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   };
 
   let pipewireTimeout: NodeJS.Timeout | undefined = undefined;
-  const prevDevices: Record<string, boolean> = Object.fromEntries([
-    ...config.pipewire.rules.onConnect.map((rule) => [rule.node, false]),
-    ...config.pipewire.rules.onDisconnect.map((rule) => [rule.node, true]),
-  ]);
 
   pipewire.on("data", (data) => {
-    updateDump(data.toString(), state.pipewire);
+    updateDump(data.toString(), state.pipewire.state);
 
     if (pipewireTimeout !== undefined) {
       pipewireTimeout.refresh();
     } else {
       pipewireTimeout = setTimeout(() => {
-        const pwItems = Object.values(state.pipewire.items);
+        const pwItems = Object.values(state.pipewire.state.items);
         config.pipewire.rules.onConnect.forEach((rule) => {
-          if (prevDevices[rule.node] === true) return;
+          if (state.pipewire.prevDevices[rule.node] === true) return;
 
           const hasDevice = pwItems.some(findPwNode(rule.node));
 
@@ -429,7 +444,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
         });
 
         config.pipewire.rules.onDisconnect.forEach((rule) => {
-          if (prevDevices[rule.node] === false) return;
+          if (state.pipewire.prevDevices[rule.node] === false) return;
 
           const hasDevice = pwItems.some(findPwNode(rule.node));
 
@@ -440,8 +455,8 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
           }
         });
 
-        Object.keys(prevDevices).forEach((device) => {
-          prevDevices[device] = pwItems.some(findPwNode(device));
+        Object.keys(state.pipewire.prevDevices).forEach((device) => {
+          state.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));
         });
       }, UPDATE_HOOK_TIMEOUT_MS);
     }

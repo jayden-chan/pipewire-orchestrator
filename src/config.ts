@@ -89,6 +89,12 @@ export type PipewireLinkBinding = {
   dest: NodeAndPort;
 };
 
+export type PipewireExclusiveLinkBinding = {
+  type: "pipewire::exclusive_link";
+  src: NodeAndPort;
+  dest: NodeAndPort;
+};
+
 export type PipewireUnLinkBinding = {
   type: "pipewire::unlink";
   src: NodeAndPort;
@@ -101,6 +107,7 @@ export type ActionBinding =
   | MidiBinding
   | PipewireLinkBinding
   | PipewireUnLinkBinding
+  | PipewireExclusiveLinkBinding
   | RangeBinding;
 
 export type Binding =

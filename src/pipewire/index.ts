@@ -3,6 +3,7 @@ import { Readable } from "stream";
 import { run } from "../util";
 import { spawn } from "child_process";
 import { error, log, warn } from "../logger";
+import { handlePwLinkError } from "../commands/watch_midi";
 
 export const findPwNode = (searchTerm: string) => {
   return (item: PipewireItem) => {
@@ -108,21 +109,17 @@ async function modifyLink(
 
   const { srcNode, srcPort, destNode } = linkItems;
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
-  if (srcLinks === undefined) {
-    const flags = mode === "destroy" ? "-d" : "";
-    const command = `pw-link ${flags} "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
-    log(`[command] ${command}`);
-    await run(command);
-  } else if (
+  if (
     mode === "ensure" &&
-    !srcLinks.links.some((link) => link[0].id === destNode.id)
+    (srcLinks === undefined ||
+      !srcLinks.links.some((link) => link[0].id === destNode.id))
   ) {
     const command = `pw-link "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
     log(`[command] ${command}`);
     await run(command);
   } else if (
     mode === "destroy" &&
-    srcLinks.links.some((link) => link[0].id === destNode.id)
+    srcLinks?.links.some((link) => link[0].id === destNode.id)
   ) {
     const command = `pw-link -d "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
     log(`[command] ${command}`);
@@ -144,6 +141,32 @@ export async function destroyLink(
   dump: PipewireDump
 ): Promise<void> {
   await modifyLink(src, dest, dump, "destroy");
+}
+
+export async function exclusiveLink(
+  src: NodeAndPort,
+  dest: NodeAndPort,
+  dump: PipewireDump
+): Promise<void> {
+  const linkItems = findLinkPair(src, dest, dump);
+  if (linkItems === undefined) {
+    return;
+  }
+
+  const { srcNode, srcPort, destNode } = linkItems;
+  const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
+  if (srcLinks !== undefined) {
+    // remove any links that aren't the exclusive one specified
+    srcLinks.links.forEach(([dNode, dPort]) => {
+      if (dNode.id !== destNode.id) {
+        const command = `pw-link -d "${srcNode.id}:${srcPort.id}" "${dNode.id}:${dPort.id}"`;
+        log(`[command] ${command}`);
+        run(command).catch(handlePwLinkError);
+      }
+    });
+  }
+
+  await modifyLink(src, dest, dump, "ensure");
 }
 
 export function watchPwDump(): [Promise<void>, Readable] {

@@ -142,9 +142,8 @@ function handleNoteOn(
   }
 
   if (button.label === "Shift") {
-    // shift key is inverted for some reason
-    debug("Shift OFF");
-    state.shiftPressed = false;
+    debug("Shift ON");
+    state.shiftPressed = true;
     return;
   }
 
@@ -222,9 +221,8 @@ function handleNoteOff(
   }
 
   if (button.label === "Shift") {
-    // shift key is inverted for some reason
-    debug("Shift ON");
-    state.shiftPressed = true;
+    debug("Shift OFF");
+    state.shiftPressed = false;
     return;
   }
 

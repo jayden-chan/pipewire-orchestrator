@@ -4,7 +4,36 @@ import { Button, Device } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 
-const portRe = /client (\d+): '(.*?)'/;
+const PORT_RE = /client (\d+): '(.*?)'/;
+const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
+
+export function run(cmd: string): Promise<[string, string]> {
+  return new Promise((resolve, reject) => {
+    exec(cmd, (error, stdout, stderr) => {
+      if (error) {
+        reject({ error, stdout, stderr });
+        return;
+      }
+      resolve([stdout, stderr]);
+    });
+  });
+}
+
+export async function findDevicePort(
+  name: string
+): Promise<string | undefined> {
+  const [amidil] = await run("amidi --list-devices");
+  const amidilLines = amidil.split(/\r?\n/g);
+  const devicePortLine = amidilLines.find((line) => line.includes(name));
+  if (devicePortLine === undefined) {
+    error(`Unable to locate device "${name}"`);
+    return undefined;
+  }
+
+  const [, devicePort] = devicePortLine.match(deviceRe) ?? [];
+  return devicePort;
+}
+
 export async function connectMidiDevices(
   d1: string,
   d2: string
@@ -12,7 +41,7 @@ export async function connectMidiDevices(
   const [aconnectListing] = await run("aconnect --list");
 
   const devices = aconnectListing.split(/\r?\n/g).map((line) => {
-    const [, clientNum, name] = line.match(portRe) ?? [];
+    const [, clientNum, name] = line.match(PORT_RE) ?? [];
     debug(clientNum, name);
     return { clientNum, name };
   });
@@ -37,18 +66,6 @@ export async function connectMidiDevices(
       throw e;
     }
   }
-}
-
-export function run(cmd: string): Promise<[string, string]> {
-  return new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
-      if (error) {
-        reject({ error, stdout, stderr });
-        return;
-      }
-      resolve([stdout, stderr]);
-    });
-  });
 }
 
 export function buttonLEDBytes(

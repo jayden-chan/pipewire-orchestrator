@@ -16,9 +16,8 @@ import {
   run,
   buttonLEDBytes,
   connectMidiDevices,
+  findDevicePort,
 } from "../util";
-
-const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
 const MAP_FUNCTIONS = {
   IDENTITY: (input: any) => input,
@@ -312,28 +311,20 @@ export async function watchMidiCommand(configPath: string) {
     await connectMidiDevices(d1, d2);
   }
 
-  const [amidil] = await run("amidi --list-devices");
-  const amidilLines = amidil.split(/\r?\n/g);
-  const devicePortLine = amidilLines.find((line) => line.includes(dev));
-  if (devicePortLine === undefined) {
-    error(`Unable to locate device "${dev}"`);
-    return;
-  }
-
-  const [deviceMatched, devicePort] = devicePortLine.match(deviceRe) ?? [];
-  if (!deviceMatched) {
+  const devicePort = await findDevicePort(dev);
+  if (!devicePort) {
     error("Failed to extract port from device listing");
     return;
   }
+
+  const [watchMidiProm, stream] = watchMidi(devicePort);
+  const [midishProm, midishIn] = midish();
 
   const devMapping = DEVICE_CONFS[dev];
   if (devMapping === undefined) {
     error(`No device config available for "${dev}"`);
     return;
   }
-
-  const [watchMidiProm, stream] = watchMidi(devicePort);
-  const [midishProm, midishIn] = midish();
 
   // set up LED states on initialization
   amidiSend(config.virtMidi, defaultLEDStates(config.bindings, devMapping));

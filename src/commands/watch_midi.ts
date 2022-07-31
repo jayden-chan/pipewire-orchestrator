@@ -76,18 +76,15 @@ const findDial = (event: MidiEvent) => {
   }
 };
 
-function handleBinding(
+async function handleBinding(
   binding: ActionBinding,
   config: Config,
   midishIn: Readable,
   state: WatchMidiState,
   button?: Button
-) {
+): Promise<void> {
   if (binding.type === "command") {
-    run(binding.command).catch((err) => {
-      error(`[command]`, err);
-    });
-    return;
+    return run(binding.command).then(() => Promise.resolve());
   }
 
   if (binding.type === "midi") {
@@ -218,9 +215,7 @@ function handleBinding(
       })
     );
 
-    amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
-
-    return;
+    return amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
   }
 
   if (binding.type === "range") {
@@ -239,13 +234,13 @@ function handleBinding(
   }
 }
 
-function handleNoteOn(
+async function handleNoteOn(
   event: MidiEvent,
   devMapping: Device,
   config: Config,
   midishIn: Readable,
   state: WatchMidiState
-) {
+): Promise<void> {
   if (event.type !== MidiEventType.NoteOn) {
     return;
   }
@@ -278,6 +273,55 @@ function handleNoteOn(
       return;
     }
 
+    if (binding.type === "command") {
+      if (state.buttons[button.label] === undefined) {
+        const runningState = Object.entries(button.ledStates ?? {}).find(
+          ([state]) => state === "AMBER"
+        );
+
+        const data = buttonLEDBytes(
+          button,
+          (runningState ?? ["OFF"])[0],
+          event.channel,
+          event.note
+        );
+
+        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+      }
+
+      const timestamp = new Date().valueOf();
+      state.buttons[button.label] = timestamp;
+
+      return handleBinding(binding, config, midishIn, state, button).then(
+        () => {
+          if (state.buttons[button.label] !== timestamp) {
+            return;
+          }
+
+          delete state.buttons[button.label];
+
+          setTimeout(
+            () => {
+              const onState = Object.entries(button.ledStates ?? {}).find(
+                ([state]) => state === "ON" || state === "GREEN"
+              );
+
+              if (onState !== undefined) {
+                const data = buttonLEDBytes(
+                  button,
+                  onState[0],
+                  event.channel,
+                  event.note
+                );
+                amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+              }
+            },
+            new Date().valueOf() - timestamp < 150 ? 150 : 0
+          );
+        }
+      );
+    }
+
     if (binding.type === "cycle") {
       if (state.buttons[button.label] === undefined) {
         state.buttons[button.label] = 1;
@@ -295,8 +339,7 @@ function handleNoteOn(
       );
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      handleBinding(newBind.bind, config, midishIn, state, button);
-      return;
+      return handleBinding(newBind.bind, config, midishIn, state, button);
     }
 
     if (binding.type === "momentary") {
@@ -309,14 +352,14 @@ function handleNoteOn(
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
-      binding.onPress.do.forEach((bind) => {
-        handleBinding(bind, config, midishIn, state, button);
-      });
-      return;
+      return Promise.all(
+        binding.onPress.do.map((bind) => {
+          return handleBinding(bind, config, midishIn, state, button);
+        })
+      ).then(() => Promise.resolve());
     }
 
-    handleBinding(binding, config, midishIn, state, button);
-    return;
+    return handleBinding(binding, config, midishIn, state, button);
   }
 
   // default behavior for button that isn't bound to anything.
@@ -337,7 +380,7 @@ function handleNoteOn(
       b2: event.note,
       b3: button.ledStates[ledStates[state.buttons[key]]],
     };
-    amidiSend(config.virtMidi, [data]);
+    return amidiSend(config.virtMidi, [data]);
   }
 }
 

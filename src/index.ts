@@ -3,8 +3,18 @@ import { watchMidiCommand } from "./commands/watch_midi";
 
 async function main() {
   const cmd = process.argv[2];
+  if (cmd === undefined) {
+    console.error(`Specify a command: "watch_midi", or "swap_amps"`);
+    return;
+  }
+
   if (cmd === "watch_midi") {
-    const device = process.argv[3] ?? "APC Key 25 MIDI";
+    const device = process.argv[3];
+    if (device === undefined) {
+      console.error(`Usage: watch_midi </path/to/config.json>`);
+      return;
+    }
+
     const exitCode = await watchMidiCommand(device);
     process.exit(exitCode);
   }
@@ -13,6 +23,10 @@ async function main() {
     await swapAmps();
     return;
   }
+
+  console.error(
+    `Invalid command: "${cmd}". Options: "watch_midi", or "swap_amps"`
+  );
 }
 
 main();

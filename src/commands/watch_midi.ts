@@ -12,10 +12,13 @@ import {
 } from "../midi";
 import { midiEventToMidish, midish } from "../midi/midish";
 import {
+  audioClients,
   destroyLink,
   ensureLink,
   exclusiveLink,
   findPwNode,
+  mixerPorts,
+  NodeWithPorts,
   PipewireDump,
   updateDump,
   watchPwDump,
@@ -81,7 +84,9 @@ function handleBinding(
   button?: Button
 ) {
   if (binding.type === "command") {
-    run(binding.command);
+    run(binding.command).catch((err) => {
+      error(`[command]`, err);
+    });
     return;
   }
 
@@ -110,6 +115,72 @@ function handleBinding(
       handlePwLinkError
     );
     return;
+  }
+
+  if (binding.type === "pipewire::select_link") {
+    const sources: Record<string, NodeWithPorts> = Object.fromEntries(
+      audioClients(state.pipewire.state).map((item) => [
+        item.node.info?.props?.["application.name"],
+        item,
+      ])
+    );
+
+    const mixerChannels = mixerPorts(state.pipewire.state);
+    if (mixerChannels === undefined) {
+      return;
+    }
+
+    debug("[select_link]", sources);
+    debug("[select_link]", mixerChannels);
+
+    run(
+      `echo "${Object.keys(sources).join(
+        "\n"
+      )}" | rofi -dmenu -i -p "select source:" -theme links`
+    )
+      .then(([stdout1]) => {
+        const sourceId = sources[stdout1.trim()];
+        run(
+          `echo "${Object.keys(mixerChannels).join(
+            "\n"
+          )}" | rofi -dmenu -i -p "select mixer channel:" -theme links`
+        )
+          .then(([stdout2]) => {
+            const mixerChannel = mixerChannels[stdout2.trim()];
+            const sourceNodeId = sourceId.node.id;
+
+            sourceId.ports.forEach((port) => {
+              const sourcePortId = port.id;
+              const destPort =
+                port.info?.props?.["audio.channel"] === "FL"
+                  ? mixerChannel.ports[0]
+                  : mixerChannel.ports[1];
+
+              const sourceName = port.info?.props?.["port.alias"];
+              const destName = destPort.info?.props?.["port.alias"];
+
+              const command = `pw-link "${sourceName}" "${destName}"`;
+              log(`[command] ${command}`);
+              run(command).catch(handlePwLinkError);
+
+              const key = `${sourceNodeId}:${sourcePortId}`;
+              const srcLinks = state.pipewire.state.links.forward[key];
+              if (srcLinks !== undefined) {
+                // remove any links that aren't the exclusive one specified
+                srcLinks.links.forEach(([, dPort]) => {
+                  if (dPort.id !== destPort.id) {
+                    const dName = dPort.info?.props?.["port.alias"];
+                    const command = `pw-link -d "${sourceName}" "${dName}"`;
+                    log(`[command] ${command}`);
+                    run(command).catch(handlePwLinkError);
+                  }
+                });
+              }
+            });
+          })
+          .catch((_) => {});
+      })
+      .catch((_) => {});
   }
 
   if (binding.type === "mute") {

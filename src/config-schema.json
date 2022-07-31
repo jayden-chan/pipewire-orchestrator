@@ -620,6 +620,21 @@
                                                 {
                                                     "additionalProperties": false,
                                                     "properties": {
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::select_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
                                                             "properties": {
@@ -1101,6 +1116,21 @@
                                                 {
                                                     "additionalProperties": false,
                                                     "properties": {
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::select_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
                                                             "properties": {
@@ -1562,6 +1592,21 @@
                                                 {
                                                     "additionalProperties": false,
                                                     "properties": {
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::select_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
                                                             "properties": {
@@ -1746,6 +1791,21 @@
                         },
                         "required": [
                             "dial",
+                            "type"
+                        ],
+                        "type": "object"
+                    },
+                    {
+                        "additionalProperties": false,
+                        "properties": {
+                            "type": {
+                                "enum": [
+                                    "pipewire::select_link"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "required": [
                             "type"
                         ],
                         "type": "object"
@@ -2231,6 +2291,21 @@
                                                 {
                                                     "additionalProperties": false,
                                                     "properties": {
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::select_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
                                                             "properties": {
@@ -2689,6 +2764,21 @@
                                                     },
                                                     "required": [
                                                         "dial",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                        "type": {
+                                                            "enum": [
+                                                                "pipewire::select_link"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
                                                         "type"
                                                     ],
                                                     "type": "object"

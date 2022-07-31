@@ -125,7 +125,7 @@ export function defaultLEDStates(
 
       if (binding.type === "command") {
         const onState = Object.entries(button.ledStates ?? {}).find(
-          ([state]) => state === "ON"
+          ([state]) => state === "ON" || state === "GREEN"
         );
 
         if (onState !== undefined) {

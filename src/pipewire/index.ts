@@ -43,6 +43,76 @@ export type NodeAndPort = {
   port: string;
 };
 
+export type NodeWithPorts = {
+  node: PipewireItem;
+  ports: PipewireItem[];
+};
+
+export function audioClients(dump: PipewireDump): NodeWithPorts[] {
+  const pwVals = Object.values(dump.items);
+  const pwPorts = pwVals.filter(
+    (i) => i.type === PipewireItemType.PipeWireInterfacePort
+  );
+
+  return pwVals
+    .map((e) => {
+      if (e.info?.props?.["application.name"] === undefined) {
+        return undefined;
+      }
+
+      const outputPorts = pwPorts.filter(
+        (p) =>
+          p.info?.props?.["node.id"] === e.id &&
+          p.info?.["direction"] === "output" &&
+          !p.info?.props?.["port.name"]?.toLowerCase().includes("monitor")
+      );
+
+      if (outputPorts.length === 0) {
+        return undefined;
+      }
+
+      return { node: e, ports: outputPorts };
+    })
+    .filter((i) => i !== undefined) as NodeWithPorts[];
+}
+
+export function mixerPorts(
+  dump: PipewireDump
+): Record<string, NodeWithPorts> | undefined {
+  const pwVals = Object.values(dump.items);
+  const pwPorts = pwVals.filter(
+    (i) => i.type === PipewireItemType.PipeWireInterfacePort
+  );
+
+  const mixer = pwVals.find(
+    (e) => e.info?.props?.["node.description"] === "Mixer"
+  );
+
+  if (mixer === undefined) {
+    error("[mixerPorts] could not find mixer node");
+    return;
+  }
+
+  return Object.fromEntries(
+    pwPorts
+      .filter(
+        (i) =>
+          i.info?.props?.["node.id"] === mixer.id &&
+          i.info?.props?.["format.dsp"]?.includes("audio") &&
+          i.info?.direction === "input"
+      )
+      .reduce((acc, curr, i, arr) => {
+        if (i % 2 === 0) {
+          acc.push([
+            `Mixer Port ${acc.length + 1}`,
+            { node: curr, ports: [curr, arr[i + 1]] },
+          ]);
+        }
+        return acc;
+      }, [] as [string, NodeWithPorts][])
+  );
+}
+
 export function findLinkPair(
   src: NodeAndPort,
   dest: NodeAndPort,
@@ -153,13 +223,15 @@ export async function exclusiveLink(
     return;
   }
 
-  const { srcNode, srcPort, destNode } = linkItems;
+  const { srcNode, srcPort, destPort } = linkItems;
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
   if (srcLinks !== undefined) {
     // remove any links that aren't the exclusive one specified
-    srcLinks.links.forEach(([dNode, dPort]) => {
-      if (dNode.id !== destNode.id) {
-        const command = `pw-link -d "${srcNode.id}:${srcPort.id}" "${dNode.id}:${dPort.id}"`;
+    const sourceName = srcPort.info?.props?.["port.alias"];
+    srcLinks.links.forEach(([, dPort]) => {
+      if (dPort.id !== destPort.id) {
+        const destName = dPort.info?.props?.["port.alias"];
+        const command = `pw-link -d "${sourceName}" "${destName}"`;
         log(`[command] ${command}`);
         run(command).catch(handlePwLinkError);
       }

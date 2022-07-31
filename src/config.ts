@@ -83,6 +83,10 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
+export type PipewireSelectLink = {
+  type: "pipewire::select_link";
+};
+
 export type PipewireLinkBinding = {
   type: "pipewire::link";
   src: NodeAndPort;
@@ -108,6 +112,7 @@ export type ActionBinding =
   | PipewireLinkBinding
   | PipewireUnLinkBinding
   | PipewireExclusiveLinkBinding
+  | PipewireSelectLink
   | RangeBinding;
 
 export type Binding =

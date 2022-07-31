@@ -21,6 +21,10 @@ const MAP_FUNCTIONS = {
   SQRT: (input: number) => Math.sqrt(input),
 };
 
+const DEVICE_CONFS: Record<string, Device> = {
+  "APC Key 25 MIDI": apcKey25,
+};
+
 function handleBinding(
   event: MidiEvent,
   binding: Binding,
@@ -82,7 +86,7 @@ function handleBinding(
 
     if (ledBytes !== undefined) {
       amidiSend(config.virtMidi, [ledBytes]).catch((err) => {
-        error(`failed to send midi to amidi: `, err);
+        error("failed to send midi to amidi:", err);
       });
     }
 
@@ -106,7 +110,7 @@ function handleBinding(
 
     if (data !== undefined) {
       amidiSend(config.virtMidi, [data]).catch((err) => {
-        error(`failed to send midi to amidi: `, err);
+        error("failed to send midi to amidi:", err);
       });
     }
   }
@@ -141,7 +145,7 @@ function handleNoteOn(
     return;
   }
 
-  debug(`[button pressed] ${button.label}`);
+  debug("[button pressed]", button.label);
   let binding = config.bindings[button.label];
   if (binding !== undefined) {
     let setColor: string | undefined = undefined;
@@ -168,7 +172,7 @@ function handleNoteOn(
       const data = buttonLEDBytes(button, setColor, event.channel, event.note);
       if (data !== undefined) {
         amidiSend(config.virtMidi, [data]).catch((err) => {
-          error(`failed to send midi to amidi: `, err);
+          error("failed to send midi to amidi:", err);
         });
       }
     }
@@ -230,7 +234,7 @@ function handleNoteOff(
       const data = buttonLEDBytes(button, color, event.channel, event.note);
       if (data !== undefined) {
         amidiSend(config.virtMidi, [data]).catch((err) => {
-          error(`failed to send midi to amidi: `, err);
+          error("failed to send midi to amidi:", err);
         });
       }
     }
@@ -295,12 +299,11 @@ type WatchMidiState = {
 };
 
 export async function watchMidiCommand(configPath: string) {
-  const [amidil] = await run("amidi --list-devices");
-
   const config = await readConfig(configPath);
-  log(`Loaded config file`);
+  log("Loaded config file");
   const dev = config.device;
 
+  const [amidil] = await run("amidi --list-devices");
   const amidilLines = amidil.split(/\r?\n/g);
   const devicePortLine = amidilLines.find((line) => line.includes(dev));
   if (devicePortLine === undefined) {
@@ -310,15 +313,18 @@ export async function watchMidiCommand(configPath: string) {
 
   const [deviceMatched, devicePort] = devicePortLine.match(deviceRe) ?? [];
   if (!deviceMatched) {
-    error(`Failed to extract port from device listing`);
+    error("Failed to extract port from device listing");
+    return;
+  }
+
+  const devMapping = DEVICE_CONFS[dev];
+  if (devMapping === undefined) {
+    error(`No device config available for "${dev}"`);
     return;
   }
 
   const [watchMidiProm, stream] = watchMidi(devicePort);
   const [midishProm, midishIn] = midish();
-
-  // TODO: don't hard code this
-  const devMapping = apcKey25;
 
   // set up LED states on initialization
   amidiSend(config.virtMidi, defaultLEDStates(config.bindings, devMapping));
@@ -346,7 +352,7 @@ export async function watchMidiCommand(configPath: string) {
 
   stream.on("data", (data) => {
     const event = JSON.parse(data) as MidiEvent;
-    debug(`[midi]`, event);
+    debug("[midi]", event);
 
     if (event.type === MidiEventType.NoteOn) {
       handleNoteOn(event, devMapping, config, midishIn, state);

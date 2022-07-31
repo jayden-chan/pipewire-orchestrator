@@ -1,6 +1,6 @@
 import { Readable } from "stream";
 import { ActionBinding, Config, readConfig } from "../config";
-import { Button, Device, Range } from "../devices";
+import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log } from "../logger";
 import {
@@ -11,7 +11,13 @@ import {
   watchMidi,
 } from "../midi";
 import { midiEventToMidish, midish } from "../midi/midish";
-import { ensureLink, PipewireDump, updateDump, watchPwDump } from "../pipewire";
+import {
+  destroyLink,
+  ensureLink,
+  PipewireDump,
+  updateDump,
+  watchPwDump,
+} from "../pipewire";
 import { PipewireItemType } from "../pipewire/types";
 import {
   defaultLEDStates,
@@ -42,21 +48,43 @@ const DEVICE_CONFS: Record<string, Device> = {
 const handleAmidiError = (err: any) =>
   error("failed to send midi to amidi:", err);
 
+const handlePwLinkError = (err: any) => {
+  if (err instanceof Error) {
+    if (
+      !err.message.includes(
+        "failed to unlink ports: No such file or directory"
+      ) &&
+      !err.message.includes("failed to link ports: File exists")
+    ) {
+      error(err);
+      throw err;
+    }
+  }
+};
+
+const findButton = (event: MidiEvent) => {
+  if (
+    event.type === MidiEventType.NoteOn ||
+    event.type === MidiEventType.NoteOff
+  ) {
+    return (b: Button) => b.channel === event.channel && b.note === event.note;
+  }
+};
+
+const findDial = (event: MidiEvent) => {
+  if (event.type === MidiEventType.ControlChange) {
+    return (b: Dial) =>
+      b.channel === event.channel && b.controller === event.controller;
+  }
+};
+
 function handleBinding(
-  event: MidiEvent,
   binding: ActionBinding,
   config: Config,
   button: Button,
   midishIn: Readable,
   state: WatchMidiState
 ) {
-  if (
-    event.type !== MidiEventType.NoteOn &&
-    event.type !== MidiEventType.NoteOff
-  ) {
-    return;
-  }
-
   if (binding.type === "command") {
     run(binding.command);
     return;
@@ -66,6 +94,18 @@ function handleBinding(
     const midishCmd = binding.events.map(midiEventToMidish).join("\n");
     midishIn.push(midishCmd);
     return;
+  }
+
+  if (binding.type === "pipewire::link") {
+    ensureLink(binding.src, binding.dest, state.pipewire).catch(
+      handlePwLinkError
+    );
+  }
+
+  if (binding.type === "pipewire::unlink") {
+    destroyLink(binding.src, binding.dest, state.pipewire).catch(
+      handlePwLinkError
+    );
   }
 
   if (binding.type === "mute") {
@@ -86,10 +126,10 @@ function handleBinding(
       state.mutes[binding.dial] = false;
       const stateVal = state.dials[binding.dial];
       controlVal = stateVal !== undefined ? stateVal : 0;
-      ledBytes = buttonLEDBytes(button, "GREEN", event.channel, event.note);
+      ledBytes = buttonLEDBytes(button, "GREEN", button.channel, button.note);
     } else {
       state.mutes[binding.dial] = true;
-      ledBytes = buttonLEDBytes(button, "RED", event.channel, event.note);
+      ledBytes = buttonLEDBytes(button, "RED", button.channel, button.note);
     }
 
     midishIn.push(
@@ -117,8 +157,8 @@ function handleBinding(
     const data = buttonLEDBytes(
       button,
       newMode.color,
-      event.channel,
-      event.note
+      button.channel,
+      button.note
     );
 
     amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
@@ -142,7 +182,10 @@ function handleNoteOn(
   }
 
   const key = `${event.channel}:${event.note}`;
-  const button = devMapping.buttons[key];
+  const button = devMapping.buttons.find(
+    (b) => b.channel === event.channel && b.note === event.note
+  );
+
   if (button === undefined) {
     return;
   }
@@ -179,7 +222,7 @@ function handleNoteOn(
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
-      handleBinding(event, newBind.bind, config, button, midishIn, state);
+      handleBinding(newBind.bind, config, button, midishIn, state);
       return;
     }
 
@@ -194,12 +237,12 @@ function handleNoteOn(
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
       binding.onPress.do.forEach((bind) => {
-        handleBinding(event, bind, config, button, midishIn, state);
+        handleBinding(bind, config, button, midishIn, state);
       });
       return;
     }
 
-    handleBinding(event, binding, config, button, midishIn, state);
+    handleBinding(binding, config, button, midishIn, state);
     return;
   }
 
@@ -236,8 +279,7 @@ function handleNoteOff(
     return;
   }
 
-  const key = `${event.channel}:${event.note}`;
-  const button = devMapping.buttons[key];
+  const button = devMapping.buttons.find(findButton(event)!);
   if (button === undefined) {
     return;
   }
@@ -255,7 +297,7 @@ function handleNoteOff(
     amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
     binding.onRelease.do.forEach((bind) => {
-      handleBinding(event, bind, config, button, midishIn, state);
+      handleBinding(bind, config, button, midishIn, state);
     });
   }
 }
@@ -277,8 +319,7 @@ function handleControlChange(
     return;
   }
 
-  const key = `${event.channel}:${event.controller}`;
-  const dial = devMapping.dials[key];
+  const dial = devMapping.dials.find(findDial(event)!);
   if (dial) {
     debug(`[dial] `, dial.label, event.value);
     let pct = event.value / (dial.range[1] - dial.range[0]);
@@ -373,6 +414,15 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
   let pipewireTimeout: NodeJS.Timeout | undefined = undefined;
 
+  const rules = {
+    onConnect: [
+      {
+        node: "Bose QuietComfort 35",
+        do: {},
+      },
+    ],
+  };
+
   pipewire.on("data", (data) => {
     updateDump(data.toString(), state.pipewire);
 
@@ -391,14 +441,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
           Promise.all([
             ensureLink(QC35_EQ_L, QC35_L, state.pipewire),
             ensureLink(QC35_EQ_R, QC35_R, state.pipewire),
-          ]).catch((err) => {
-            error(err);
-            if (err instanceof Error) {
-              if (!err.message.includes("failed to link ports: File exists")) {
-                throw err;
-              }
-            }
-          });
+          ]).catch(handlePwLinkError);
         }
 
         prevHadQC35 = hasQC35;

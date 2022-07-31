@@ -2,6 +2,8 @@ export type Range = [number, number];
 
 export type Button = {
   label: string;
+  channel: number;
+  note: number;
   ledStates?: {
     [key: string]: number;
   };
@@ -9,20 +11,16 @@ export type Button = {
 
 export type Dial = {
   label: string;
+  channel: number;
+  controller: number;
   range: Range;
 };
 
 export type Device = {
   name: string;
-  buttons: {
-    // channel:note
-    [key: string]: Button;
-  };
+  buttons: Button[];
   keys: {
     channel: number;
   };
-  dials: {
-    // channel:controller
-    [key: string]: Dial;
-  };
+  dials: Dial[];
 };

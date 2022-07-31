@@ -2,6 +2,7 @@ import { Range } from "./devices";
 import Ajv from "ajv";
 import { readFile } from "fs/promises";
 import { MidiEvent } from "./midi";
+import { NodeAndPort } from "./pipewire";
 
 export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT";
 
@@ -82,10 +83,24 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
+export type PipewireLinkBinding = {
+  type: "pipewire::link";
+  src: NodeAndPort;
+  dest: NodeAndPort;
+};
+
+export type PipewireUnLinkBinding = {
+  type: "pipewire::unlink";
+  src: NodeAndPort;
+  dest: NodeAndPort;
+};
+
 export type ActionBinding =
   | CommandBinding
   | ToggleMuteBinding
   | MidiBinding
+  | PipewireLinkBinding
+  | PipewireUnLinkBinding
   | RangeBinding;
 
 export type Binding =
@@ -127,7 +142,8 @@ export async function readConfig(path: string): Promise<Config> {
 
   const valid = validate(contents);
   if (!valid) {
-    throw new Error("invalid schema");
+    console.error("Invalid config file:", validate.errors);
+    throw new Error("Invalid config file");
   }
 
   return contents;

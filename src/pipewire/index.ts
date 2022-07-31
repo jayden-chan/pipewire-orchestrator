@@ -4,6 +4,18 @@ import { run } from "../util";
 import { spawn } from "child_process";
 import { error, log, warn } from "../logger";
 
+export const findPwNode = (searchTerm: string) => {
+  return (item: PipewireItem) => {
+    if (item.type !== PipewireItemType.PipeWireInterfaceNode) {
+      return false;
+    }
+
+    const desc = item.info?.props?.["node.description"];
+    const name = item.info?.props?.["node.name"];
+    return desc === searchTerm || name === searchTerm;
+  };
+};
+
 export type Links = {
   [key: string]: {
     item: PipewireItem;
@@ -43,25 +55,16 @@ export function findLinkPair(
     }
   | undefined {
   const items = Object.values(dump.items);
-  const srcNode = items.find(
-    (item) =>
-      item.type === PipewireItemType.PipeWireInterfaceNode &&
-      item.info?.props?.["node.description"] === src.node
-  );
 
+  const srcNode = items.find(findPwNode(src.node));
   if (srcNode === undefined) {
-    warn("failed to find src node");
+    warn(`[pw-link] failed to locate src node "${src.node}"`);
     return undefined;
   }
 
-  const destNode = items.find(
-    (item) =>
-      item.type === PipewireItemType.PipeWireInterfaceNode &&
-      item.info?.props?.["node.description"] === dest.node
-  );
-
+  const destNode = items.find(findPwNode(dest.node));
   if (destNode === undefined) {
-    warn("failed to find dest node");
+    warn(`[pw-link] failed to locate dest node "${dest.node}"`);
     return undefined;
   }
 
@@ -73,7 +76,7 @@ export function findLinkPair(
   );
 
   if (srcPort === undefined) {
-    warn("failed to locate src port");
+    warn(`[pw-link] failed to locate src port "${src.port}"`);
     return undefined;
   }
 
@@ -85,7 +88,7 @@ export function findLinkPair(
   );
 
   if (destPort === undefined) {
-    warn("failed to locate dest port");
+    warn(`[pw-link] failed to locate dest port "${dest.port}"`);
     return undefined;
   }
 
@@ -96,7 +99,7 @@ async function modifyLink(
   src: NodeAndPort,
   dest: NodeAndPort,
   dump: PipewireDump,
-  mode: "ENSURE" | "DESTROY"
+  mode: "ensure" | "destroy"
 ): Promise<void> {
   const linkItems = findLinkPair(src, dest, dump);
   if (linkItems === undefined) {
@@ -105,12 +108,23 @@ async function modifyLink(
 
   const { srcNode, srcPort, destNode } = linkItems;
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
-  if (
-    srcLinks === undefined ||
+  if (srcLinks === undefined) {
+    const flags = mode === "destroy" ? "-d" : "";
+    const command = `pw-link ${flags} "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    log(`[command] ${command}`);
+    await run(command);
+  } else if (
+    mode === "ensure" &&
     !srcLinks.links.some((link) => link[0].id === destNode.id)
   ) {
-    const flags = mode === "DESTROY" ? "-d" : "";
-    const command = `pw-link ${flags} "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    const command = `pw-link "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    log(`[command] ${command}`);
+    await run(command);
+  } else if (
+    mode === "destroy" &&
+    srcLinks.links.some((link) => link[0].id === destNode.id)
+  ) {
+    const command = `pw-link -d "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
     log(`[command] ${command}`);
     await run(command);
   }
@@ -121,7 +135,7 @@ export async function ensureLink(
   dest: NodeAndPort,
   dump: PipewireDump
 ): Promise<void> {
-  await modifyLink(src, dest, dump, "ENSURE");
+  await modifyLink(src, dest, dump, "ensure");
 }
 
 export async function destroyLink(
@@ -129,7 +143,7 @@ export async function destroyLink(
   dest: NodeAndPort,
   dump: PipewireDump
 ): Promise<void> {
-  await modifyLink(src, dest, dump, "DESTROY");
+  await modifyLink(src, dest, dump, "destroy");
 }
 
 export function watchPwDump(): [Promise<void>, Readable] {

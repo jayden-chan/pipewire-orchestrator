@@ -14,26 +14,20 @@ import { midiEventToMidish, midish } from "../midi/midish";
 import {
   destroyLink,
   ensureLink,
+  findPwNode,
   PipewireDump,
   updateDump,
   watchPwDump,
 } from "../pipewire";
-import { PipewireItemType } from "../pipewire/types";
 import {
-  defaultLEDStates,
-  run,
   buttonLEDBytes,
   connectMidiDevices,
+  defaultLEDStates,
   findDevicePort,
+  run,
 } from "../util";
 
-const UPDATE_HOOK_TIMEOUT_MS = 300;
-const QC35_NAME = "Bose QuietComfort 35";
-const QC35_EQ_NAME = "LSP Parametric EQ x16 Stereo (QC35)";
-const QC35_EQ_L = { node: QC35_EQ_NAME, port: "Output L" };
-const QC35_EQ_R = { node: QC35_EQ_NAME, port: "Output R" };
-const QC35_L = { node: QC35_NAME, port: "playback_FL" };
-const QC35_R = { node: QC35_NAME, port: "playback_FR" };
+const UPDATE_HOOK_TIMEOUT_MS = 150;
 
 const MAP_FUNCTIONS = {
   IDENTITY: (input: any) => input,
@@ -81,9 +75,9 @@ const findDial = (event: MidiEvent) => {
 function handleBinding(
   binding: ActionBinding,
   config: Config,
-  button: Button,
   midishIn: Readable,
-  state: WatchMidiState
+  state: WatchMidiState,
+  button?: Button
 ) {
   if (binding.type === "command") {
     run(binding.command);
@@ -126,10 +120,12 @@ function handleBinding(
       state.mutes[binding.dial] = false;
       const stateVal = state.dials[binding.dial];
       controlVal = stateVal !== undefined ? stateVal : 0;
-      ledBytes = buttonLEDBytes(button, "GREEN", button.channel, button.note);
+      ledBytes =
+        button && buttonLEDBytes(button, "GREEN", button.channel, button.note);
     } else {
       state.mutes[binding.dial] = true;
-      ledBytes = buttonLEDBytes(button, "RED", button.channel, button.note);
+      ledBytes =
+        button && buttonLEDBytes(button, "RED", button.channel, button.note);
     }
 
     midishIn.push(
@@ -154,12 +150,9 @@ function handleBinding(
       idx: newIdx,
     };
 
-    const data = buttonLEDBytes(
-      button,
-      newMode.color,
-      button.channel,
-      button.note
-    );
+    const data =
+      button &&
+      buttonLEDBytes(button, newMode.color, button.channel, button.note);
 
     amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
   }
@@ -221,8 +214,7 @@ function handleNoteOn(
       );
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-
-      handleBinding(newBind.bind, config, button, midishIn, state);
+      handleBinding(newBind.bind, config, midishIn, state, button);
       return;
     }
 
@@ -237,12 +229,12 @@ function handleNoteOn(
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
       binding.onPress.do.forEach((bind) => {
-        handleBinding(bind, config, button, midishIn, state);
+        handleBinding(bind, config, midishIn, state, button);
       });
       return;
     }
 
-    handleBinding(binding, config, button, midishIn, state);
+    handleBinding(binding, config, midishIn, state, button);
     return;
   }
 
@@ -297,7 +289,7 @@ function handleNoteOff(
     amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
     binding.onRelease.do.forEach((bind) => {
-      handleBinding(bind, config, button, midishIn, state);
+      handleBinding(bind, config, midishIn, state, button);
     });
   }
 }
@@ -410,18 +402,11 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     ),
   };
 
-  let prevHadQC35 = false;
-
   let pipewireTimeout: NodeJS.Timeout | undefined = undefined;
-
-  const rules = {
-    onConnect: [
-      {
-        node: "Bose QuietComfort 35",
-        do: {},
-      },
-    ],
-  };
+  const prevDevices: Record<string, boolean> = Object.fromEntries([
+    ...config.pipewire.rules.onConnect.map((rule) => [rule.node, false]),
+    ...config.pipewire.rules.onDisconnect.map((rule) => [rule.node, true]),
+  ]);
 
   pipewire.on("data", (data) => {
     updateDump(data.toString(), state.pipewire);
@@ -430,22 +415,34 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
       pipewireTimeout.refresh();
     } else {
       pipewireTimeout = setTimeout(() => {
-        debug("running update hook");
-        const hasQC35 = Object.values(state.pipewire.items).some(
-          (item) =>
-            item.type === PipewireItemType.PipeWireInterfaceNode &&
-            item.info?.props?.["node.description"] === QC35_NAME
-        );
+        const pwItems = Object.values(state.pipewire.items);
+        config.pipewire.rules.onConnect.forEach((rule) => {
+          if (prevDevices[rule.node] === true) return;
 
-        if (!prevHadQC35 && hasQC35) {
-          Promise.all([
-            ensureLink(QC35_EQ_L, QC35_L, state.pipewire),
-            ensureLink(QC35_EQ_R, QC35_R, state.pipewire),
-          ]).catch(handlePwLinkError);
-        }
+          const hasDevice = pwItems.some(findPwNode(rule.node));
 
-        prevHadQC35 = hasQC35;
-        pipewireTimeout = undefined;
+          if (hasDevice) {
+            rule.do.forEach((binding) => {
+              handleBinding(binding, config, midishIn, state);
+            });
+          }
+        });
+
+        config.pipewire.rules.onDisconnect.forEach((rule) => {
+          if (prevDevices[rule.node] === false) return;
+
+          const hasDevice = pwItems.some(findPwNode(rule.node));
+
+          if (!hasDevice) {
+            rule.do.forEach((binding) => {
+              handleBinding(binding, config, midishIn, state);
+            });
+          }
+        });
+
+        Object.keys(prevDevices).forEach((device) => {
+          prevDevices[device] = pwItems.some(findPwNode(device));
+        });
       }, UPDATE_HOOK_TIMEOUT_MS);
     }
   });

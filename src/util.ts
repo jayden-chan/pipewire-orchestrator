@@ -104,41 +104,34 @@ export function defaultLEDStates(
 ): ByteTriplet[] {
   return Object.entries(bindings)
     .map(([key, binding]) => {
-      const devKey = Object.entries(devMapping.buttons).find(
-        ([, b]) => b.label === key
-      );
-
-      if (devKey === undefined) {
+      const button = devMapping.buttons.find((b) => b.label === key);
+      if (button === undefined) {
         return undefined;
       }
 
       if (binding.type === "range") {
         const mode = binding.modes[0];
-        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        return buttonLEDBytes(devKey[1], mode.color, channel, note);
+        return buttonLEDBytes(button, mode.color, button.channel, button.note);
       }
 
       if (binding.type === "mute") {
-        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        return buttonLEDBytes(devKey[1], "GREEN", channel, note);
+        return buttonLEDBytes(button, "GREEN", button.channel, button.note);
       }
 
       if (binding.type === "cycle") {
         const color = binding.items[0].color ?? "OFF";
-        const [channel, note] = devKey[0].split(":").map((n) => Number(n));
-        return buttonLEDBytes(devKey[1], color, channel, note);
+        return buttonLEDBytes(button, color, button.channel, button.note);
       }
 
       if (binding.type === "command") {
-        const onState = Object.entries(devKey[1].ledStates ?? {}).find(
+        const onState = Object.entries(button.ledStates ?? {}).find(
           ([state]) => state === "ON"
         );
 
         if (onState !== undefined) {
-          const [channel, note] = devKey[0].split(":").map((n) => Number(n));
           return {
-            b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
-            b2: note,
+            b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | button.channel,
+            b2: button.note,
             b3: onState[1],
           };
         }

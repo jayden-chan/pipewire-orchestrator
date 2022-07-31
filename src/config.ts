@@ -119,14 +119,16 @@ export type Config = {
   device: string;
   virtMidi: string;
   bindings: Bindings;
-  pipewire?: {
+  pipewire: {
     rules: {
-      onConnect: [
-        {
-          node: string;
-          do: ActionBinding[];
-        }
-      ];
+      onConnect: {
+        node: string;
+        do: ActionBinding[];
+      }[];
+      onDisconnect: {
+        node: string;
+        do: ActionBinding[];
+      }[];
     };
   };
 };

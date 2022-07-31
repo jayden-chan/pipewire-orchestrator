@@ -29,3 +29,4 @@ aconnect <virtual device id> <hardware device id>
 - [ ] Combine MIDI and Pipewire watch modes
 - [ ] Use shift/other modifier key to open popup dialog for assigning dial to application
 - [ ] Add long press/momentary push functionality
+- [ ] Request parameter dump from midi device on startup

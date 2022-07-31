@@ -53,7 +53,7 @@ export type MidiBinding = {
 export type CycleBinding = {
   type: "cycle";
   items: {
-    bind: CommandBinding | MidiBinding;
+    bind: ActionBinding;
     color?: string;
   }[];
 };
@@ -66,11 +66,11 @@ export type MomentaryBinding = {
   type: "momentary";
   onPress: {
     color?: string;
-    bind: CommandBinding | MidiBinding;
+    do: ActionBinding[];
   };
   onRelease: {
     color?: string;
-    bind: CommandBinding | MidiBinding;
+    do: ActionBinding[];
   };
 };
 
@@ -82,13 +82,17 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
-export type Binding =
+export type ActionBinding =
   | CommandBinding
+  | ToggleMuteBinding
+  | MidiBinding
+  | RangeBinding;
+
+export type Binding =
   | PassthroughBinding
   | RangeBinding
-  | MidiBinding
-  | ToggleMuteBinding
   | CycleBinding
+  | ActionBinding
   | MomentaryBinding;
 
 export type Bindings = {
@@ -100,6 +104,16 @@ export type Config = {
   device: string;
   virtMidi: string;
   bindings: Bindings;
+  pipewire?: {
+    rules: {
+      onConnect: [
+        {
+          node: string;
+          do: ActionBinding[];
+        }
+      ];
+    };
+  };
 };
 
 export async function readConfig(path: string): Promise<Config> {

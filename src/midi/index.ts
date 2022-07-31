@@ -103,12 +103,16 @@ export function midiNumberToEvent(num: number): MidiEventType {
   }
 }
 
-export async function amidiSend(port: string, items: ByteTriplet[]) {
+export async function amidiSend(
+  port: string,
+  items: (ByteTriplet | undefined)[]
+) {
   const hex = items
+    .filter((i) => i !== undefined)
     .map((i) => {
-      const b1Str = i.b1.toString(16).padStart(2, "0");
-      const b2Str = i.b2.toString(16).padStart(2, "0");
-      const b3Str = i.b3.toString(16).padStart(2, "0");
+      const b1Str = i!.b1.toString(16).padStart(2, "0");
+      const b2Str = i!.b2.toString(16).padStart(2, "0");
+      const b3Str = i!.b3.toString(16).padStart(2, "0");
       return `${b1Str}${b2Str}${b3Str}`;
     })
     .join("");

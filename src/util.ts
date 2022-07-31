@@ -75,11 +75,11 @@ export async function connectMidiDevices(
 
 export function buttonLEDBytes(
   button: Button,
-  color: string,
+  color: string | undefined,
   channel: number,
   note: number
 ): ByteTriplet | undefined {
-  if (button.ledStates !== undefined) {
+  if (button.ledStates !== undefined && color !== undefined) {
     const ledState = Object.entries(button.ledStates).find(
       ([c]) => c === color
     );

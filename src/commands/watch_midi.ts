@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import { Binding, Config, readConfig } from "../config";
+import { ActionBinding, Config, readConfig } from "../config";
 import { Button, Device, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log } from "../logger";
@@ -34,7 +34,7 @@ const handleAmidiError = (err: any) =>
 
 function handleBinding(
   event: MidiEvent,
-  binding: Binding,
+  binding: ActionBinding,
   config: Config,
   button: Button,
   midishIn: Readable,
@@ -91,9 +91,7 @@ function handleBinding(
       })
     );
 
-    if (ledBytes !== undefined) {
-      amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
-    }
+    amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
 
     return;
   }
@@ -113,9 +111,7 @@ function handleBinding(
       event.note
     );
 
-    if (data !== undefined) {
-      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-    }
+    amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
   }
 }
 
@@ -148,9 +144,13 @@ function handleNoteOn(
   }
 
   debug("[button pressed]", button.label);
-  let binding = config.bindings[button.label];
+  const binding = config.bindings[button.label];
   if (binding !== undefined) {
-    let setColor: string | undefined = undefined;
+    if (binding.type === "passthrough") {
+      // cannot passthrough note events (yet)
+      return;
+    }
+
     if (binding.type === "cycle") {
       if (state.buttons[button.label] === undefined) {
         state.buttons[button.label] = 1;
@@ -160,21 +160,33 @@ function handleNoteOn(
       }
 
       const newBind = binding.items[state.buttons[button.label]];
-      setColor = newBind.color;
+      const data = buttonLEDBytes(
+        button,
+        newBind.color,
+        event.channel,
+        event.note
+      );
 
-      binding = newBind.bind;
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+
+      handleBinding(event, newBind.bind, config, button, midishIn, state);
+      return;
     }
 
     if (binding.type === "momentary") {
-      setColor = binding.onPress.color;
-      binding = binding.onPress.bind;
-    }
+      const data = buttonLEDBytes(
+        button,
+        binding.onPress.color,
+        event.channel,
+        event.note
+      );
 
-    if (setColor !== undefined) {
-      const data = buttonLEDBytes(button, setColor, event.channel, event.note);
-      if (data !== undefined) {
-        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      }
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+
+      binding.onPress.do.forEach((bind) => {
+        handleBinding(event, bind, config, button, midishIn, state);
+      });
+      return;
     }
 
     handleBinding(event, binding, config, button, midishIn, state);
@@ -226,18 +238,15 @@ function handleNoteOff(
     return;
   }
 
-  let binding = config.bindings[button.label];
+  const binding = config.bindings[button.label];
   if (binding !== undefined && binding.type === "momentary") {
-    let color = binding.onRelease.color;
-    if (color !== undefined) {
-      const data = buttonLEDBytes(button, color, event.channel, event.note);
-      if (data !== undefined) {
-        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      }
-    }
+    const color = binding.onRelease.color;
+    const data = buttonLEDBytes(button, color, event.channel, event.note);
+    amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
-    binding = binding.onRelease.bind;
-    handleBinding(event, binding, config, button, midishIn, state);
+    binding.onRelease.do.forEach((bind) => {
+      handleBinding(event, bind, config, button, midishIn, state);
+    });
   }
 }
 
@@ -295,7 +304,7 @@ type WatchMidiState = {
   buttons: ButtonStates;
 };
 
-export async function watchMidiCommand(configPath: string) {
+export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const config = await readConfig(configPath);
   log("Loaded config file");
   const dev = config.device;
@@ -307,7 +316,7 @@ export async function watchMidiCommand(configPath: string) {
   const devicePort = await findDevicePort(dev);
   if (!devicePort) {
     error("Failed to extract port from device listing");
-    return;
+    return 1;
   }
 
   const [watchMidiProm, stream] = watchMidi(devicePort);
@@ -316,7 +325,7 @@ export async function watchMidiCommand(configPath: string) {
   const devMapping = DEVICE_CONFS[dev];
   if (devMapping === undefined) {
     error(`No device config available for "${dev}"`);
-    return;
+    return 1;
   }
 
   // set up LED states on initialization
@@ -345,21 +354,26 @@ export async function watchMidiCommand(configPath: string) {
     const event = JSON.parse(data) as MidiEvent;
     debug("[midi]", event);
 
-    if (event.type === MidiEventType.NoteOn) {
-      handleNoteOn(event, devMapping, config, midishIn, state);
-    } else if (event.type === MidiEventType.ControlChange) {
-      handleControlChange(event, devMapping, config, midishIn, state);
-    } else if (event.type === MidiEventType.NoteOff) {
-      handleNoteOff(event, devMapping, config, midishIn, state);
-    } else {
-      log(event);
+    switch (event.type) {
+      case MidiEventType.NoteOn:
+        handleNoteOn(event, devMapping, config, midishIn, state);
+        break;
+      case MidiEventType.NoteOff:
+        handleNoteOff(event, devMapping, config, midishIn, state);
+        break;
+      case MidiEventType.ControlChange:
+        handleControlChange(event, devMapping, config, midishIn, state);
+        break;
+      default:
+        log(event);
     }
   });
 
   try {
     await Promise.race([watchMidiProm, midishProm]);
+    return 0;
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);
-    process.exit(1);
+    return 1;
   }
 }

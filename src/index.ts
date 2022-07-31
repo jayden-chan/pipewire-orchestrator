@@ -11,7 +11,8 @@ async function main() {
 
   if (cmd === "watch_midi") {
     const device = process.argv[3] ?? "APC Key 25 MIDI";
-    await watchMidiCommand(device);
+    const exitCode = await watchMidiCommand(device);
+    process.exit(exitCode);
   }
 
   if (cmd === "swap_amps") {

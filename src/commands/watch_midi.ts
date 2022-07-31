@@ -11,7 +11,12 @@ import {
   watchMidi,
 } from "../midi";
 import { midiEventToMidish, midish } from "../midi/midish";
-import { defaultLEDStates, run, buttonLEDBytes } from "../util";
+import {
+  defaultLEDStates,
+  run,
+  buttonLEDBytes,
+  connectMidiDevices,
+} from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
@@ -302,6 +307,10 @@ export async function watchMidiCommand(configPath: string) {
   const config = await readConfig(configPath);
   log("Loaded config file");
   const dev = config.device;
+
+  for (const [d1, d2] of config.connections) {
+    await connectMidiDevices(d1, d2);
+  }
 
   const [amidil] = await run("amidi --list-devices");
   const amidilLines = amidil.split(/\r?\n/g);

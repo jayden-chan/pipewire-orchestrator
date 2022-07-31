@@ -1097,6 +1097,22 @@
             },
             "type": "object"
         },
+        "connections": {
+            "items": {
+                "items": [
+                    {
+                        "type": "string"
+                    },
+                    {
+                        "type": "string"
+                    }
+                ],
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+            },
+            "type": "array"
+        },
         "device": {
             "type": "string"
         },
@@ -1106,6 +1122,7 @@
     },
     "required": [
         "bindings",
+        "connections",
         "device",
         "virtMidi"
     ],

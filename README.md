@@ -24,7 +24,7 @@ aconnect <virtual device id> <hardware device id>
 - [x] Microphone mute button
 - [ ] EQ selection with buttons
 - [ ] Auto-connect gain controllers with pw-dump watcher
-- [ ] Auto-connect virtual midi devices with aconnect
+- [x] Auto-connect virtual midi devices with aconnect
 - [ ] Add TCP RPC
 - [ ] Combine MIDI and Pipewire watch modes
 - [ ] Use shift/other modifier key to open popup dialog for assigning dial to application

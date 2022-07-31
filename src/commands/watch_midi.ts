@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import { Binding, Bindings, readConfig } from "../config";
+import { Binding, Config, readConfig } from "../config";
 import { Button, Device, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log } from "../logger";
@@ -15,9 +15,6 @@ import { defaultLEDStates, run, buttonLEDBytes } from "../util";
 
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
-// TODO: stop hard-coding this later
-const HW_MIDI = "hw:5,1";
-
 const MAP_FUNCTIONS = {
   IDENTITY: (input: any) => input,
   SQUARED: (input: number) => input * input,
@@ -27,7 +24,7 @@ const MAP_FUNCTIONS = {
 function handleBinding(
   event: MidiEvent,
   binding: Binding,
-  bindings: Bindings,
+  config: Config,
   button: Button,
   midishIn: Readable,
   state: WatchMidiState
@@ -52,7 +49,7 @@ function handleBinding(
 
   if (binding.type === "mute") {
     const bDial = binding.dial;
-    const dialBinding = Object.entries(bindings).find(
+    const dialBinding = Object.entries(config.bindings).find(
       ([dial]) => dial === bDial
     );
 
@@ -84,7 +81,7 @@ function handleBinding(
     );
 
     if (ledBytes !== undefined) {
-      amidiSend(HW_MIDI, [ledBytes]).catch((err) => {
+      amidiSend(config.virtMidi, [ledBytes]).catch((err) => {
         error(`failed to send midi to amidi: `, err);
       });
     }
@@ -108,7 +105,7 @@ function handleBinding(
     );
 
     if (data !== undefined) {
-      amidiSend(HW_MIDI, [data]).catch((err) => {
+      amidiSend(config.virtMidi, [data]).catch((err) => {
         error(`failed to send midi to amidi: `, err);
       });
     }
@@ -118,7 +115,7 @@ function handleBinding(
 function handleNoteOn(
   event: MidiEvent,
   devMapping: Device,
-  bindings: Bindings,
+  config: Config,
   midishIn: Readable,
   state: WatchMidiState
 ) {
@@ -145,7 +142,7 @@ function handleNoteOn(
   }
 
   debug(`[button pressed] ${button.label}`);
-  let binding = bindings[button.label];
+  let binding = config.bindings[button.label];
   if (binding !== undefined) {
     let setColor: string | undefined = undefined;
     if (binding.type === "cycle") {
@@ -170,13 +167,13 @@ function handleNoteOn(
     if (setColor !== undefined) {
       const data = buttonLEDBytes(button, setColor, event.channel, event.note);
       if (data !== undefined) {
-        amidiSend(HW_MIDI, [data]).catch((err) => {
+        amidiSend(config.virtMidi, [data]).catch((err) => {
           error(`failed to send midi to amidi: `, err);
         });
       }
     }
 
-    handleBinding(event, binding, bindings, button, midishIn, state);
+    handleBinding(event, binding, config, button, midishIn, state);
     return;
   }
 
@@ -198,14 +195,14 @@ function handleNoteOn(
       b2: event.note,
       b3: button.ledStates[ledStates[state.buttons[key]]],
     };
-    amidiSend(HW_MIDI, [data]);
+    amidiSend(config.virtMidi, [data]);
   }
 }
 
 function handleNoteOff(
   event: MidiEvent,
   devMapping: Device,
-  bindings: Bindings,
+  config: Config,
   midishIn: Readable,
   state: WatchMidiState
 ) {
@@ -226,27 +223,27 @@ function handleNoteOff(
     return;
   }
 
-  let binding = bindings[button.label];
+  let binding = config.bindings[button.label];
   if (binding !== undefined && binding.type === "momentary") {
     let color = binding.onRelease.color;
     if (color !== undefined) {
       const data = buttonLEDBytes(button, color, event.channel, event.note);
       if (data !== undefined) {
-        amidiSend(HW_MIDI, [data]).catch((err) => {
+        amidiSend(config.virtMidi, [data]).catch((err) => {
           error(`failed to send midi to amidi: `, err);
         });
       }
     }
 
     binding = binding.onRelease.bind;
-    handleBinding(event, binding, bindings, button, midishIn, state);
+    handleBinding(event, binding, config, button, midishIn, state);
   }
 }
 
 function handleControlChange(
   event: MidiEvent,
   devMapping: Device,
-  bindings: Bindings,
+  config: Config,
   midishIn: Readable,
   state: WatchMidiState
 ) {
@@ -270,7 +267,7 @@ function handleControlChange(
       pct = pct * (end - start) + start;
     }
 
-    const binding = bindings[dial.label];
+    const binding = config.bindings[dial.label];
     if (binding !== undefined && binding.type === "passthrough") {
       const newCo = `out${binding.outChannel}`;
       const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
@@ -297,33 +294,34 @@ type WatchMidiState = {
   buttons: ButtonStates;
 };
 
-export async function watchMidiCommand(dev: string) {
+export async function watchMidiCommand(configPath: string) {
   const [amidil] = await run("amidi --list-devices");
-  const foundPort = amidil.split(/\r?\n/g).find((line) => line.includes(dev));
 
-  const config = await readConfig("./config.json");
+  const config = await readConfig(configPath);
   log(`Loaded config file`);
-  const BINDINGS = config.bindings;
-  const BINDINGS_ENTRIES = Object.entries(BINDINGS);
+  const dev = config.device;
 
-  if (foundPort === undefined) {
+  const amidilLines = amidil.split(/\r?\n/g);
+  const devicePortLine = amidilLines.find((line) => line.includes(dev));
+  if (devicePortLine === undefined) {
     error(`Unable to locate device "${dev}"`);
     return;
   }
 
-  const [matched, port] = foundPort.match(deviceRe) ?? [];
-  if (!matched) {
+  const [deviceMatched, devicePort] = devicePortLine.match(deviceRe) ?? [];
+  if (!deviceMatched) {
     error(`Failed to extract port from device listing`);
     return;
   }
 
-  const [watchMidiProm, stream] = watchMidi(port);
+  const [watchMidiProm, stream] = watchMidi(devicePort);
   const [midishProm, midishIn] = midish();
 
+  // TODO: don't hard code this
   const devMapping = apcKey25;
 
   // set up LED states on initialization
-  amidiSend(HW_MIDI, defaultLEDStates(BINDINGS, devMapping));
+  amidiSend(config.virtMidi, defaultLEDStates(config.bindings, devMapping));
 
   const state: WatchMidiState = {
     shiftPressed: false,
@@ -331,13 +329,15 @@ export async function watchMidiCommand(dev: string) {
     mutes: {},
     dials: {},
     ranges: Object.fromEntries(
-      BINDINGS_ENTRIES.map(([, val]) => {
-        if (val.type === "range") {
-          return [val.dial, { range: val.modes[0].range, idx: 0 }];
-        } else {
-          return undefined;
-        }
-      }).filter((v) => v !== undefined) as [
+      Object.entries(config.bindings)
+        .map(([, val]) => {
+          if (val.type === "range") {
+            return [val.dial, { range: val.modes[0].range, idx: 0 }];
+          } else {
+            return undefined;
+          }
+        })
+        .filter((v) => v !== undefined) as [
         string,
         { range: Range; idx: number }
       ][]
@@ -349,11 +349,11 @@ export async function watchMidiCommand(dev: string) {
     debug(`[midi]`, event);
 
     if (event.type === MidiEventType.NoteOn) {
-      handleNoteOn(event, devMapping, BINDINGS, midishIn, state);
+      handleNoteOn(event, devMapping, config, midishIn, state);
     } else if (event.type === MidiEventType.ControlChange) {
-      handleControlChange(event, devMapping, BINDINGS, midishIn, state);
+      handleControlChange(event, devMapping, config, midishIn, state);
     } else if (event.type === MidiEventType.NoteOff) {
-      handleNoteOff(event, devMapping, BINDINGS, midishIn, state);
+      handleNoteOff(event, devMapping, config, midishIn, state);
     } else {
       log(event);
     }
@@ -363,5 +363,6 @@ export async function watchMidiCommand(dev: string) {
     await Promise.race([watchMidiProm, midishProm]);
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);
+    process.exit(1);
   }
 }

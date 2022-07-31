@@ -96,6 +96,8 @@ export type Bindings = {
 };
 
 export type Config = {
+  device: string;
+  virtMidi: string;
   bindings: Bindings;
 };
 

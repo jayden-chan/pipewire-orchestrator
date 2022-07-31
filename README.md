@@ -12,7 +12,7 @@ echo "snd_virmidi" | sudo tee /etc/modules-load.d/snd-virmidi.conf
 ```bash
 # find devices
 aconnect -l
-aconnect <hardware device id> <virtual device id>
+aconnect <virtual device id> <hardware device id>
 ```
 
 ## Todo

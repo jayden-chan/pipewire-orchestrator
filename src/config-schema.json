@@ -1096,10 +1096,18 @@
                 ]
             },
             "type": "object"
+        },
+        "device": {
+            "type": "string"
+        },
+        "virtMidi": {
+            "type": "string"
         }
     },
     "required": [
-        "bindings"
+        "bindings",
+        "device",
+        "virtMidi"
     ],
     "type": "object"
 }

@@ -13,6 +13,7 @@ import {
 import { midiEventToMidish, midish } from "../midi/midish";
 import {
   audioClients,
+  connectAppToMixer,
   destroyLink,
   ensureLink,
   exclusiveLink,
@@ -37,6 +38,18 @@ const MAP_FUNCTIONS = {
   IDENTITY: (input: any) => input,
   SQUARED: (input: number) => input * input,
   SQRT: (input: number) => Math.sqrt(input),
+  TAPER: (input: number) => {
+    if (0.49 <= input && input <= 0.51) {
+      return input;
+    }
+
+    const f = (input: number) => 2 * input ** 2;
+    if (input <= 0.5) {
+      return f(input);
+    } else {
+      return -f(-input + 1) + 1;
+    }
+  },
 };
 
 const DEVICE_CONFS: Record<string, Device> = {
@@ -114,72 +127,6 @@ async function handleBinding(
     return;
   }
 
-  if (binding.type === "pipewire::select_link") {
-    const sources: Record<string, NodeWithPorts> = Object.fromEntries(
-      audioClients(state.pipewire.state).map((item) => [
-        item.node.info?.props?.["application.name"],
-        item,
-      ])
-    );
-
-    const mixerChannels = mixerPorts(state.pipewire.state);
-    if (mixerChannels === undefined) {
-      return;
-    }
-
-    debug("[select_link]", sources);
-    debug("[select_link]", mixerChannels);
-
-    run(
-      `echo "${Object.keys(sources).join(
-        "\n"
-      )}" | rofi -dmenu -i -p "select source:" -theme links`
-    )
-      .then(([stdout1]) => {
-        const sourceId = sources[stdout1.trim()];
-        run(
-          `echo "${Object.keys(mixerChannels).join(
-            "\n"
-          )}" | rofi -dmenu -i -p "select mixer channel:" -theme links`
-        )
-          .then(([stdout2]) => {
-            const mixerChannel = mixerChannels[stdout2.trim()];
-            const sourceNodeId = sourceId.node.id;
-
-            sourceId.ports.forEach((port) => {
-              const sourcePortId = port.id;
-              const destPort =
-                port.info?.props?.["audio.channel"] === "FL"
-                  ? mixerChannel.ports[0]
-                  : mixerChannel.ports[1];
-
-              const sourceName = port.info?.props?.["port.alias"];
-              const destName = destPort.info?.props?.["port.alias"];
-
-              const command = `pw-link "${sourceName}" "${destName}"`;
-              log(`[command] ${command}`);
-              run(command).catch(handlePwLinkError);
-
-              const key = `${sourceNodeId}:${sourcePortId}`;
-              const srcLinks = state.pipewire.state.links.forward[key];
-              if (srcLinks !== undefined) {
-                // remove any links that aren't the exclusive one specified
-                srcLinks.links.forEach(([, dPort]) => {
-                  if (dPort.id !== destPort.id) {
-                    const dName = dPort.info?.props?.["port.alias"];
-                    const command = `pw-link -d "${sourceName}" "${dName}"`;
-                    log(`[command] ${command}`);
-                    run(command).catch(handlePwLinkError);
-                  }
-                });
-              }
-            });
-          })
-          .catch((_) => {});
-      })
-      .catch((_) => {});
-  }
-
   if (binding.type === "mute") {
     const bDial = binding.dial;
     const dialBinding = Object.entries(config.bindings).find(
@@ -219,18 +166,70 @@ async function handleBinding(
   }
 
   if (binding.type === "range") {
-    const newIdx = (state.ranges[binding.dial].idx + 1) % binding.modes.length;
-    const newMode = binding.modes[newIdx];
-    state.ranges[binding.dial] = {
-      range: newMode.range,
-      idx: newIdx,
-    };
+    if (state.shiftPressed) {
+      const data =
+        button &&
+        buttonLEDBytes(button, "AMBER_FLASHING", button.channel, button.note);
 
-    const data =
-      button &&
-      buttonLEDBytes(button, newMode.color, button.channel, button.note);
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
-    amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+      const sources: Record<string, NodeWithPorts> = Object.fromEntries(
+        audioClients(state.pipewire.state).map((item) => [
+          item.node.info?.props?.["application.name"],
+          item,
+        ])
+      );
+
+      const mixerChannels = mixerPorts(state.pipewire.state);
+      if (mixerChannels === undefined) {
+        return;
+      }
+
+      const resetLED = () => {
+        if (button !== undefined) {
+          const data = buttonLEDBytes(
+            button,
+            binding.modes[0].color,
+            button.channel,
+            button.note
+          );
+          amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+        }
+      };
+
+      state.rofiOpen = true;
+      run(
+        `echo "${Object.keys(sources).join(
+          "\n"
+        )}" | rofi -dmenu -i -p "select source:" -theme links`
+      )
+        .then(([stdout]) => {
+          const source = sources[stdout.trim()];
+          const mixerChannel = Number(
+            binding.dial.slice(binding.dial.indexOf("Dial ") + 5)
+          );
+          const channel = mixerChannels[`Mixer Channel ${mixerChannel}`];
+          connectAppToMixer(source, channel, state.pipewire.state).then(() =>
+            resetLED()
+          );
+        })
+        .catch((_) => resetLED())
+        .finally(() => (state.rofiOpen = false));
+    } else {
+      const newIdx =
+        (state.ranges[binding.dial].idx + 1) % binding.modes.length;
+      const newMode = binding.modes[newIdx];
+      state.ranges[binding.dial] = {
+        range: newMode.range,
+        idx: newIdx,
+      };
+
+      const data =
+        button &&
+        buttonLEDBytes(button, newMode.color, button.channel, button.note);
+
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+    }
   }
 }
 
@@ -270,6 +269,15 @@ async function handleNoteOn(
   if (binding !== undefined) {
     if (binding.type === "passthrough") {
       // cannot passthrough note events (yet)
+      return;
+    }
+
+    if (binding.type === "cancel") {
+      if (state.rofiOpen) {
+        run("xdotool key Escape").catch((err) => error(err));
+      } else if (binding.alt !== undefined) {
+        return handleBinding(binding.alt, config, midishIn, state, button);
+      }
       return;
     }
 
@@ -438,14 +446,15 @@ function handleControlChange(
   const dial = devMapping.dials.find(findDial(event)!);
   if (dial) {
     debug(`[dial] `, dial.label, event.value);
-    let pct = event.value / (dial.range[1] - dial.range[0]);
-    if (state.ranges[dial.label] !== undefined) {
-      const [start, end] = state.ranges[dial.label].range;
-      pct = pct * (end - start) + start;
-    }
 
     const binding = config.bindings[dial.label];
     if (binding !== undefined && binding.type === "passthrough") {
+      let pct = event.value / (dial.range[1] - dial.range[0]);
+      if (state.ranges[dial.label] !== undefined) {
+        const [start, end] = state.ranges[dial.label].range;
+        pct = pct * (end - start) + start;
+      }
+
       const newCo = `out${binding.outChannel}`;
       const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
       const mapped = Math.round(mappedPct * 16383);
@@ -465,6 +474,7 @@ type MuteStates = Record<string, boolean>;
 type DialStates = Record<string, number>;
 type WatchMidiState = {
   shiftPressed: boolean;
+  rofiOpen: boolean;
   ranges: RangeStates;
   mutes: MuteStates;
   dials: DialStates;
@@ -505,6 +515,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
   const state: WatchMidiState = {
     shiftPressed: false,
+    rofiOpen: false,
     buttons: {},
     mutes: {},
     dials: {},

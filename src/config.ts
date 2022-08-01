@@ -4,7 +4,7 @@ import { readFile } from "fs/promises";
 import { MidiEvent } from "./midi";
 import { NodeAndPort } from "./pipewire";
 
-export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT";
+export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT" | "TAPER";
 
 export type DialRange = {
   range: Range;
@@ -76,15 +76,20 @@ export type MomentaryBinding = {
 };
 
 /**
+ * Cancel any current pending action. If there is no pending action
+ * then the alt binding will be executed (if specified)
+ */
+export type CancelBinding = {
+  type: "cancel";
+  alt?: ActionBinding;
+};
+
+/**
  * Toggle mute for the given dial
  */
 export type ToggleMuteBinding = {
   type: "mute";
   dial: string;
-};
-
-export type PipewireSelectLink = {
-  type: "pipewire::select_link";
 };
 
 export type PipewireLinkBinding = {
@@ -112,11 +117,11 @@ export type ActionBinding =
   | PipewireLinkBinding
   | PipewireUnLinkBinding
   | PipewireExclusiveLinkBinding
-  | PipewireSelectLink
   | RangeBinding;
 
 export type Binding =
   | PassthroughBinding
+  | CancelBinding
   | RangeBinding
   | CycleBinding
   | ActionBinding

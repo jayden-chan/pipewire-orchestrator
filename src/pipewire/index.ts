@@ -104,13 +104,52 @@ export function mixerPorts(
       .reduce((acc, curr, i, arr) => {
         if (i % 2 === 0) {
           acc.push([
-            `Mixer Port ${acc.length + 1}`,
+            `Mixer Channel ${acc.length + 1}`,
             { node: curr, ports: [curr, arr[i + 1]] },
           ]);
         }
         return acc;
       }, [] as [string, NodeWithPorts][])
   );
+}
+
+export async function connectAppToMixer(
+  app: NodeWithPorts,
+  channel: NodeWithPorts,
+  dump: PipewireDump
+) {
+  const sourceNodeId = app.node.id;
+
+  app.ports.forEach((port) => {
+    const sourcePortId = port.id;
+    const destPort =
+      port.info?.props?.["audio.channel"] === "FL"
+        ? channel.ports[0]
+        : channel.ports[1];
+
+    const sourceName = port.info?.props?.["port.alias"];
+    const destName = destPort.info?.props?.["port.alias"];
+
+    const command = `pw-link "${sourceName}" "${destName}"`;
+    log(`[command] ${command}`);
+    const proms = [run(command).catch(handlePwLinkError)];
+
+    const key = `${sourceNodeId}:${sourcePortId}`;
+    const srcLinks = dump.links.forward[key];
+    if (srcLinks !== undefined) {
+      // remove any links that aren't the exclusive one specified
+      srcLinks.links.forEach(([, dPort]) => {
+        if (dPort.id !== destPort.id) {
+          const dName = dPort.info?.props?.["port.alias"];
+          const command = `pw-link -d "${sourceName}" "${dName}"`;
+          log(`[command] ${command}`);
+          proms.push(run(command).catch(handlePwLinkError));
+        }
+      });
+    }
+
+    return Promise.all(proms);
+  });
 }
 
 export function findLinkPair(

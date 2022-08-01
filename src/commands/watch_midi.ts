@@ -26,6 +26,7 @@ import {
 } from "../pipewire";
 import {
   buttonLEDBytes,
+  computeMappedVal,
   connectMidiDevices,
   defaultLEDStates,
   findDevicePort,
@@ -33,25 +34,6 @@ import {
 } from "../util";
 
 const UPDATE_HOOK_TIMEOUT_MS = 150;
-
-const MAP_FUNCTIONS = {
-  IDENTITY: (input: any) => input,
-  SQUARED: (input: number) => input * input,
-  SQRT: (input: number) => Math.sqrt(input),
-  TAPER: (input: number) => {
-    if (0.49 <= input && input <= 0.51) {
-      return input;
-    }
-
-    const f = (input: number) => 2 * input ** 2;
-    if (input <= 0.5) {
-      return f(input);
-    } else {
-      return -f(-input + 1) + 1;
-    }
-  },
-};
-
 const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
 };
@@ -154,12 +136,15 @@ async function handleBinding(
     }
 
     midishIn.push(
-      midiEventToMidish({
-        type: MidiEventType.ControlChange,
-        channel: dialBinding[1].outChannel,
-        controller: dialBinding[1].outController,
-        value: controlVal,
-      })
+      midiEventToMidish(
+        {
+          type: MidiEventType.ControlChange,
+          channel: dialBinding[1].outChannel,
+          controller: dialBinding[1].outController,
+          value: controlVal,
+        },
+        { highPrecisionControl: true }
+      )
     );
 
     return amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
@@ -347,7 +332,11 @@ async function handleNoteOn(
       );
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      return handleBinding(newBind.bind, config, midishIn, state, button);
+      return Promise.all(
+        newBind.actions.map((bind) => {
+          return handleBinding(bind, config, midishIn, state, button);
+        })
+      ).then(() => Promise.resolve());
     }
 
     if (binding.type === "momentary") {
@@ -449,20 +438,20 @@ function handleControlChange(
 
     const binding = config.bindings[dial.label];
     if (binding !== undefined && binding.type === "passthrough") {
-      let pct = event.value / (dial.range[1] - dial.range[0]);
-      if (state.ranges[dial.label] !== undefined) {
-        const [start, end] = state.ranges[dial.label].range;
-        pct = pct * (end - start) + start;
-      }
-
-      const newCo = `out${binding.outChannel}`;
-      const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
-      const mapped = Math.round(mappedPct * 16383);
-
+      const mapped = computeMappedVal(event.value, dial, state, binding);
       state.dials[dial.label] = mapped;
       if (!state.mutes[dial.label]) {
-        const midishCmd = `oaddev {xctl ${newCo} ${binding.outController} ${mapped}}`;
-        midishIn.push(midishCmd);
+        midishIn.push(
+          midiEventToMidish(
+            {
+              type: MidiEventType.ControlChange,
+              channel: binding.outChannel,
+              controller: binding.outController,
+              value: mapped,
+            },
+            { highPrecisionControl: true }
+          )
+        );
       }
     }
   }
@@ -472,7 +461,7 @@ type RangeStates = Record<string, { range: Range; idx: number }>;
 type ButtonStates = Record<string, number>;
 type MuteStates = Record<string, boolean>;
 type DialStates = Record<string, number>;
-type WatchMidiState = {
+export type WatchMidiState = {
   shiftPressed: boolean;
   rofiOpen: boolean;
   ranges: RangeStates;

@@ -54,7 +54,7 @@ export type MidiBinding = {
 export type CycleBinding = {
   type: "cycle";
   items: {
-    bind: ActionBinding;
+    actions: ActionBinding[];
     color?: string;
   }[];
 };

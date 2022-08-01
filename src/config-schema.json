@@ -321,458 +321,461 @@
                                 "items": {
                                     "additionalProperties": false,
                                     "properties": {
-                                        "bind": {
-                                            "anyOf": [
-                                                {
-                                                    "additionalProperties": false,
-                                                    "description": "Execute a shell command when the binding is activated",
-                                                    "properties": {
-                                                        "command": {
-                                                            "type": "string"
+                                        "actions": {
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "description": "Execute a shell command when the binding is activated",
+                                                        "properties": {
+                                                            "command": {
+                                                                "type": "string"
+                                                            },
+                                                            "type": {
+                                                                "enum": [
+                                                                    "command"
+                                                                ],
+                                                                "type": "string"
+                                                            }
                                                         },
-                                                        "type": {
-                                                            "enum": [
-                                                                "command"
-                                                            ],
-                                                            "type": "string"
-                                                        }
+                                                        "required": [
+                                                            "command",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
                                                     },
-                                                    "required": [
-                                                        "command",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "description": "Change the range of a dial when the binding is executed",
-                                                    "properties": {
-                                                        "dial": {
-                                                            "type": "string"
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "description": "Change the range of a dial when the binding is executed",
+                                                        "properties": {
+                                                            "dial": {
+                                                                "type": "string"
+                                                            },
+                                                            "modes": {
+                                                                "items": {
+                                                                    "additionalProperties": false,
+                                                                    "properties": {
+                                                                        "color": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "range": {
+                                                                            "items": [
+                                                                                {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            ],
+                                                                            "maxItems": 2,
+                                                                            "minItems": 2,
+                                                                            "type": "array"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "color",
+                                                                        "range"
+                                                                    ],
+                                                                    "type": "object"
+                                                                },
+                                                                "type": "array"
+                                                            },
+                                                            "type": {
+                                                                "enum": [
+                                                                    "range"
+                                                                ],
+                                                                "type": "string"
+                                                            }
                                                         },
-                                                        "modes": {
-                                                            "items": {
+                                                        "required": [
+                                                            "dial",
+                                                            "modes",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
+                                                    },
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "description": "Emit a MIDI event when the binding is activated",
+                                                        "properties": {
+                                                            "events": {
+                                                                "items": {
+                                                                    "anyOf": [
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "note": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "NOTE_ON"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "velocity": {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "note",
+                                                                                "type",
+                                                                                "velocity"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "note": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "NOTE_OFF"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "velocity": {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "note",
+                                                                                "type",
+                                                                                "velocity"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "note": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pressure": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "POLYPHONIC_AFTERTOUCH"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "note",
+                                                                                "pressure",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "controller": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "CONTROL_CHANGE"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "value": {
+                                                                                    "type": "number"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "controller",
+                                                                                "type",
+                                                                                "value"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "program": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "PROGRAM_CHANGE"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "program",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pressure": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "CHANNEL_PRESSURE_AFTERTOUCH"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "pressure",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "lsb": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "msb": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "PITCH_BEND"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "lsb",
+                                                                                "msb",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "type": "array"
+                                                            },
+                                                            "type": {
+                                                                "enum": [
+                                                                    "midi"
+                                                                ],
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "events",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
+                                                    },
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "description": "Toggle mute for the given dial",
+                                                        "properties": {
+                                                            "dial": {
+                                                                "type": "string"
+                                                            },
+                                                            "type": {
+                                                                "enum": [
+                                                                    "mute"
+                                                                ],
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "dial",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
+                                                    },
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                            "dest": {
                                                                 "additionalProperties": false,
                                                                 "properties": {
-                                                                    "color": {
+                                                                    "node": {
                                                                         "type": "string"
                                                                     },
-                                                                    "range": {
-                                                                        "items": [
-                                                                            {
-                                                                                "type": "number"
-                                                                            },
-                                                                            {
-                                                                                "type": "number"
-                                                                            }
-                                                                        ],
-                                                                        "maxItems": 2,
-                                                                        "minItems": 2,
-                                                                        "type": "array"
+                                                                    "port": {
+                                                                        "type": "string"
                                                                     }
                                                                 },
                                                                 "required": [
-                                                                    "color",
-                                                                    "range"
+                                                                    "node",
+                                                                    "port"
                                                                 ],
                                                                 "type": "object"
                                                             },
-                                                            "type": "array"
-                                                        },
-                                                        "type": {
-                                                            "enum": [
-                                                                "range"
-                                                            ],
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "dial",
-                                                        "modes",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "description": "Emit a MIDI event when the binding is activated",
-                                                    "properties": {
-                                                        "events": {
-                                                            "items": {
-                                                                "anyOf": [
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "note": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "NOTE_ON"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            },
-                                                                            "velocity": {
-                                                                                "type": "number"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "note",
-                                                                            "type",
-                                                                            "velocity"
-                                                                        ],
-                                                                        "type": "object"
+                                                            "src": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                    "node": {
+                                                                        "type": "string"
                                                                     },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "note": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "NOTE_OFF"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            },
-                                                                            "velocity": {
-                                                                                "type": "number"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "note",
-                                                                            "type",
-                                                                            "velocity"
-                                                                        ],
-                                                                        "type": "object"
-                                                                    },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "note": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "pressure": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "POLYPHONIC_AFTERTOUCH"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "note",
-                                                                            "pressure",
-                                                                            "type"
-                                                                        ],
-                                                                        "type": "object"
-                                                                    },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "controller": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "CONTROL_CHANGE"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            },
-                                                                            "value": {
-                                                                                "type": "number"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "controller",
-                                                                            "type",
-                                                                            "value"
-                                                                        ],
-                                                                        "type": "object"
-                                                                    },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "program": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "PROGRAM_CHANGE"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "program",
-                                                                            "type"
-                                                                        ],
-                                                                        "type": "object"
-                                                                    },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "pressure": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "CHANNEL_PRESSURE_AFTERTOUCH"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "pressure",
-                                                                            "type"
-                                                                        ],
-                                                                        "type": "object"
-                                                                    },
-                                                                    {
-                                                                        "additionalProperties": false,
-                                                                        "properties": {
-                                                                            "channel": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "lsb": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "msb": {
-                                                                                "type": "number"
-                                                                            },
-                                                                            "type": {
-                                                                                "enum": [
-                                                                                    "PITCH_BEND"
-                                                                                ],
-                                                                                "type": "string"
-                                                                            }
-                                                                        },
-                                                                        "required": [
-                                                                            "channel",
-                                                                            "lsb",
-                                                                            "msb",
-                                                                            "type"
-                                                                        ],
-                                                                        "type": "object"
+                                                                    "port": {
+                                                                        "type": "string"
                                                                     }
-                                                                ]
+                                                                },
+                                                                "required": [
+                                                                    "node",
+                                                                    "port"
+                                                                ],
+                                                                "type": "object"
                                                             },
-                                                            "type": "array"
+                                                            "type": {
+                                                                "enum": [
+                                                                    "pipewire::link"
+                                                                ],
+                                                                "type": "string"
+                                                            }
                                                         },
-                                                        "type": {
-                                                            "enum": [
-                                                                "midi"
-                                                            ],
-                                                            "type": "string"
-                                                        }
+                                                        "required": [
+                                                            "dest",
+                                                            "src",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
                                                     },
-                                                    "required": [
-                                                        "events",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "description": "Toggle mute for the given dial",
-                                                    "properties": {
-                                                        "dial": {
-                                                            "type": "string"
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                            "dest": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                    "node": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "port": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "node",
+                                                                    "port"
+                                                                ],
+                                                                "type": "object"
+                                                            },
+                                                            "src": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                    "node": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "port": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "node",
+                                                                    "port"
+                                                                ],
+                                                                "type": "object"
+                                                            },
+                                                            "type": {
+                                                                "enum": [
+                                                                    "pipewire::exclusive_link"
+                                                                ],
+                                                                "type": "string"
+                                                            }
                                                         },
-                                                        "type": {
-                                                            "enum": [
-                                                                "mute"
-                                                            ],
-                                                            "type": "string"
-                                                        }
+                                                        "required": [
+                                                            "dest",
+                                                            "src",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
                                                     },
-                                                    "required": [
-                                                        "dial",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "properties": {
-                                                        "dest": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
+                                                    {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                            "dest": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                    "node": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "port": {
+                                                                        "type": "string"
+                                                                    }
                                                                 },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
+                                                                "required": [
+                                                                    "node",
+                                                                    "port"
+                                                                ],
+                                                                "type": "object"
                                                             },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
-                                                        },
-                                                        "src": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
+                                                            "src": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                    "node": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "port": {
+                                                                        "type": "string"
+                                                                    }
                                                                 },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
+                                                                "required": [
+                                                                    "node",
+                                                                    "port"
+                                                                ],
+                                                                "type": "object"
                                                             },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
+                                                            "type": {
+                                                                "enum": [
+                                                                    "pipewire::unlink"
+                                                                ],
+                                                                "type": "string"
+                                                            }
                                                         },
-                                                        "type": {
-                                                            "enum": [
-                                                                "pipewire::link"
-                                                            ],
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "dest",
-                                                        "src",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "properties": {
-                                                        "dest": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
-                                                                },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
-                                                            },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
-                                                        },
-                                                        "src": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
-                                                                },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
-                                                            },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
-                                                        },
-                                                        "type": {
-                                                            "enum": [
-                                                                "pipewire::exclusive_link"
-                                                            ],
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "dest",
-                                                        "src",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                },
-                                                {
-                                                    "additionalProperties": false,
-                                                    "properties": {
-                                                        "dest": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
-                                                                },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
-                                                            },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
-                                                        },
-                                                        "src": {
-                                                            "additionalProperties": false,
-                                                            "properties": {
-                                                                "node": {
-                                                                    "type": "string"
-                                                                },
-                                                                "port": {
-                                                                    "type": "string"
-                                                                }
-                                                            },
-                                                            "required": [
-                                                                "node",
-                                                                "port"
-                                                            ],
-                                                            "type": "object"
-                                                        },
-                                                        "type": {
-                                                            "enum": [
-                                                                "pipewire::unlink"
-                                                            ],
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "dest",
-                                                        "src",
-                                                        "type"
-                                                    ],
-                                                    "type": "object"
-                                                }
-                                            ]
+                                                        "required": [
+                                                            "dest",
+                                                            "src",
+                                                            "type"
+                                                        ],
+                                                        "type": "object"
+                                                    }
+                                                ]
+                                            },
+                                            "type": "array"
                                         },
                                         "color": {
                                             "type": "string"
                                         }
                                     },
                                     "required": [
-                                        "bind"
+                                        "actions"
                                     ],
                                     "type": "object"
                                 },

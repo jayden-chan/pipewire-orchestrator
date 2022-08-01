@@ -3,7 +3,10 @@ import { Readable } from "stream";
 import { MidiEvent, MidiEventType } from ".";
 import { debug, error, log } from "../logger";
 
-export function midiEventToMidish(event: MidiEvent): string {
+export function midiEventToMidish(
+  event: MidiEvent,
+  flags?: { highPrecisionControl: boolean } | number
+): string {
   let cmd = "";
   switch (event.type) {
     case MidiEventType.NoteOn:
@@ -13,7 +16,7 @@ export function midiEventToMidish(event: MidiEvent): string {
       cmd = `oaddev {kat out${event.channel} ${event.note} ${event.pressure}}`;
       break;
     case MidiEventType.ControlChange:
-      if (event.value > 127) {
+      if (typeof flags !== "number" && flags?.highPrecisionControl) {
         cmd = `oaddev {xctl out${event.channel} ${event.controller} ${event.value}}`;
       } else {
         cmd = `oaddev {ctl out${event.channel} ${event.controller} ${event.value}}`;

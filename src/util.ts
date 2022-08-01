@@ -1,6 +1,7 @@
 import { exec, ExecException } from "child_process";
-import { Bindings } from "./config";
-import { Button, Device } from "./devices";
+import { WatchMidiState } from "./commands/watch_midi";
+import { Bindings, PassthroughBinding } from "./config";
+import { Button, Device, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 
@@ -12,6 +13,40 @@ export type RunCommandError = {
   stdout: string;
   stderr: string;
 };
+
+const MAP_FUNCTIONS = {
+  IDENTITY: (input: any) => input,
+  SQUARED: (input: number) => input * input,
+  SQRT: (input: number) => Math.sqrt(input),
+  TAPER: (input: number) => {
+    if (0.49 <= input && input <= 0.51) {
+      return input;
+    }
+
+    const f = (input: number) => 2 * input ** 2;
+    if (input <= 0.5) {
+      return f(input);
+    } else {
+      return -f(-input + 1) + 1;
+    }
+  },
+};
+
+export function computeMappedVal(
+  input: number,
+  dial: Dial,
+  state: WatchMidiState,
+  binding: PassthroughBinding
+): number {
+  let pct = input / (dial.range[1] - dial.range[0]);
+  if (state.ranges[dial.label] !== undefined) {
+    const [start, end] = state.ranges[dial.label].range;
+    pct = pct * (end - start) + start;
+  }
+
+  const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
+  return Math.round(mappedPct * 16383);
+}
 
 export function run(cmd: string): Promise<[string, string]> {
   return new Promise((resolve, reject) => {

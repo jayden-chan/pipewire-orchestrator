@@ -77,18 +77,30 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
+/**
+ * Create a link between two nodes and ports within PipeWire
+ */
 export type PipewireLinkBinding = {
   type: "pipewire::link";
   src: NodeAndPort;
   dest: NodeAndPort;
 };
 
+/**
+ * Create an exclusive link between two nodes and ports within PipeWire.
+ * Creating an exclusive link is equivalent to creating a normal link and then
+ * destroying all other links originating from source port that aren't the newly
+ * created one.
+ */
 export type PipewireExclusiveLinkBinding = {
   type: "pipewire::exclusive_link";
   src: NodeAndPort;
   dest: NodeAndPort;
 };
 
+/**
+ * Destroy a link between two nodes and ports within PipeWire
+ */
 export type PipewireUnLinkBinding = {
   type: "pipewire::unlink";
   src: NodeAndPort;
@@ -104,7 +116,7 @@ export type ActionBinding =
   | PipewireExclusiveLinkBinding
   | RangeBinding;
 
-export type TmpBindingType =
+export type ButtonBindAction =
   | CancelBinding
   | RangeBinding
   | CycleBinding
@@ -112,13 +124,13 @@ export type TmpBindingType =
 
 export type ButtonBinding = {
   type: "button";
-  onPress?: TmpBindingType[];
+  onPress?: ButtonBindAction[];
   // FIXME: not implemented
-  onLongPress?: TmpBindingType[];
-  onShiftPress?: TmpBindingType[];
+  onLongPress?: ButtonBindAction[];
+  onShiftPress?: ButtonBindAction[];
   // FIXME: not implemented
-  onShiftLongPress?: TmpBindingType[];
-  onRelease?: TmpBindingType[];
+  onShiftLongPress?: ButtonBindAction[];
+  onRelease?: ButtonBindAction[];
 };
 
 export type DialBinding = PassthroughBinding;

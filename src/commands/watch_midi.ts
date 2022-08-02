@@ -3,7 +3,7 @@ import {
   ActionBinding,
   readConfig,
   RuntimeConfig,
-  TmpBindingType,
+  ButtonBindAction,
 } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
@@ -268,7 +268,7 @@ async function handleNoteOn(
 }
 
 async function handleButtonBinding(
-  binding: TmpBindingType,
+  binding: ButtonBindAction,
   button: Button,
   event: MidiEventNoteOn | MidiEventNoteOff,
   state: WatchMidiState,

@@ -1,6 +1,6 @@
-import { Range } from "./devices";
 import Ajv from "ajv";
 import { readFile } from "fs/promises";
+import { Device, Range } from "./devices";
 import { MidiEvent } from "./midi";
 import { NodeAndPort } from "./pipewire";
 
@@ -148,6 +148,10 @@ export type Config = {
       }[];
     };
   };
+};
+
+export type RuntimeConfig = Omit<Config, "device"> & {
+  device: Device;
 };
 
 export async function readConfig(path: string): Promise<Config> {

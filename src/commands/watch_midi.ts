@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import { ActionBinding, Config, readConfig } from "../config";
+import { ActionBinding, readConfig, RuntimeConfig } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { debug, error, log } from "../logger";
@@ -26,10 +26,10 @@ import {
 } from "../pipewire";
 import {
   buttonLEDBytes,
-  computeMappedVal,
   connectMidiDevices,
   defaultLEDStates,
   findDevicePort,
+  manifestDialValue,
   run,
 } from "../util";
 
@@ -73,7 +73,7 @@ const findDial = (event: MidiEvent) => {
 
 async function handleBinding(
   binding: ActionBinding,
-  config: Config,
+  config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState,
   button?: Button
@@ -110,43 +110,22 @@ async function handleBinding(
   }
 
   if (binding.type === "mute") {
-    const bDial = binding.dial;
-    const dialBinding = Object.entries(config.bindings).find(
-      ([dial]) => dial === bDial
-    );
-
-    if (dialBinding === undefined || dialBinding[1].type !== "passthrough") {
-      error(`No matching binding for dial "${bDial}"`);
-      return;
-    }
-
     let controlVal = 0;
     let ledBytes: ByteTriplet | undefined = undefined;
 
     if (state.mutes[binding.dial]) {
       state.mutes[binding.dial] = false;
-      const stateVal = state.dials[binding.dial];
-      controlVal = stateVal !== undefined ? stateVal : 0;
+      controlVal = state.dials[binding.dial] ?? 0;
       ledBytes =
         button && buttonLEDBytes(button, "GREEN", button.channel, button.note);
     } else {
       state.mutes[binding.dial] = true;
+      controlVal = 0;
       ledBytes =
         button && buttonLEDBytes(button, "RED", button.channel, button.note);
     }
 
-    midishIn.push(
-      midiEventToMidish(
-        {
-          type: MidiEventType.ControlChange,
-          channel: dialBinding[1].outChannel,
-          controller: dialBinding[1].outController,
-          value: controlVal,
-        },
-        { highPrecisionControl: true }
-      )
-    );
-
+    manifestDialValue(binding.dial, controlVal, config, state, midishIn);
     return amidiSend(config.virtMidi, [ledBytes]).catch(handleAmidiError);
   }
 
@@ -154,6 +133,7 @@ async function handleBinding(
     if (state.shiftPressed) {
       const data =
         button &&
+        // TODO: stop hard coding this
         buttonLEDBytes(button, "AMBER_FLASHING", button.channel, button.note);
 
       amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
@@ -209,6 +189,16 @@ async function handleBinding(
         idx: newIdx,
       };
 
+      // update the dial value immediately so we don't get a jump
+      // in volume the next time the dial is moved
+      manifestDialValue(
+        binding.dial,
+        state.dials[binding.dial] ?? 0,
+        config,
+        state,
+        midishIn
+      );
+
       const data =
         button &&
         buttonLEDBytes(button, newMode.color, button.channel, button.note);
@@ -220,8 +210,7 @@ async function handleBinding(
 
 async function handleNoteOn(
   event: MidiEvent,
-  devMapping: Device,
-  config: Config,
+  config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ): Promise<void> {
@@ -229,13 +218,13 @@ async function handleNoteOn(
     return;
   }
 
-  if (event.channel === devMapping.keys.channel) {
-    debug(`Key ${event.note} velocity ${event.velocity}`);
+  if (event.channel === config.device.keys.channel) {
+    debug(`Key ON ${event.note} velocity ${event.velocity}`);
     return;
   }
 
   const key = `${event.channel}:${event.note}`;
-  const button = devMapping.buttons.find(
+  const button = config.device.buttons.find(
     (b) => b.channel === event.channel && b.note === event.note
   );
 
@@ -269,6 +258,7 @@ async function handleNoteOn(
     if (binding.type === "command") {
       if (state.buttons[button.label] === undefined) {
         const runningState = Object.entries(button.ledStates ?? {}).find(
+          // TODO: stop hard coding this
           ([state]) => state === "AMBER"
         );
 
@@ -383,8 +373,7 @@ async function handleNoteOn(
 
 function handleNoteOff(
   event: MidiEvent,
-  devMapping: Device,
-  config: Config,
+  config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ) {
@@ -392,7 +381,12 @@ function handleNoteOff(
     return;
   }
 
-  const button = devMapping.buttons.find(findButton(event)!);
+  if (event.channel === config.device.keys.channel) {
+    debug(`Key OFF ${event.note} velocity ${event.velocity}`);
+    return;
+  }
+
+  const button = config.device.buttons.find(findButton(event)!);
   if (button === undefined) {
     return;
   }
@@ -417,8 +411,7 @@ function handleNoteOff(
 
 function handleControlChange(
   event: MidiEvent,
-  devMapping: Device,
-  config: Config,
+  config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ) {
@@ -432,28 +425,11 @@ function handleControlChange(
     return;
   }
 
-  const dial = devMapping.dials.find(findDial(event)!);
-  if (dial) {
+  const dial = config.device.dials.find(findDial(event)!);
+  if (dial !== undefined) {
     debug(`[dial] `, dial.label, event.value);
-
-    const binding = config.bindings[dial.label];
-    if (binding !== undefined && binding.type === "passthrough") {
-      const mapped = computeMappedVal(event.value, dial, state, binding);
-      state.dials[dial.label] = mapped;
-      if (!state.mutes[dial.label]) {
-        midishIn.push(
-          midiEventToMidish(
-            {
-              type: MidiEventType.ControlChange,
-              channel: binding.outChannel,
-              controller: binding.outController,
-              value: mapped,
-            },
-            { highPrecisionControl: true }
-          )
-        );
-      }
-    }
+    manifestDialValue(dial.label, event.value, config, state, midishIn);
+    state.dials[dial.label] = event.value;
   }
 }
 
@@ -475,11 +451,11 @@ export type WatchMidiState = {
 };
 
 export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
-  const config = await readConfig(configPath);
+  const rawConfig = await readConfig(configPath);
   log("Loaded config file");
-  const dev = config.device;
+  const dev = rawConfig.device;
 
-  for (const [d1, d2] of config.connections) {
+  for (const [d1, d2] of rawConfig.connections) {
     await connectMidiDevices(d1, d2);
   }
 
@@ -489,18 +465,20 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     return 1;
   }
 
-  const [watchMidiProm, stream] = watchMidi(devicePort);
-  const [pipewireProm, pipewire] = watchPwDump();
-  const [midishProm, midishIn] = midish();
+  const [watchMidiPromise, stream] = watchMidi(devicePort);
+  const [pipewirePromise, pipewire] = watchPwDump();
+  const [midishPromise, midishIn] = midish();
 
-  const devMapping = DEVICE_CONFS[dev];
-  if (devMapping === undefined) {
+  const device = DEVICE_CONFS[dev];
+  if (device === undefined) {
     error(`No device config available for "${dev}"`);
     return 1;
   }
 
+  const config: RuntimeConfig = { ...rawConfig, device };
+
   // set up LED states on initialization
-  amidiSend(config.virtMidi, defaultLEDStates(config.bindings, devMapping));
+  amidiSend(config.virtMidi, defaultLEDStates(config.bindings, device));
 
   const state: WatchMidiState = {
     shiftPressed: false,
@@ -582,13 +560,13 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
     switch (event.type) {
       case MidiEventType.NoteOn:
-        handleNoteOn(event, devMapping, config, midishIn, state);
+        handleNoteOn(event, config, midishIn, state);
         break;
       case MidiEventType.NoteOff:
-        handleNoteOff(event, devMapping, config, midishIn, state);
+        handleNoteOff(event, config, midishIn, state);
         break;
       case MidiEventType.ControlChange:
-        handleControlChange(event, devMapping, config, midishIn, state);
+        handleControlChange(event, config, midishIn, state);
         break;
       default:
         log(event);
@@ -596,7 +574,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   });
 
   try {
-    await Promise.race([watchMidiProm, pipewireProm, midishProm]);
+    await Promise.race([watchMidiPromise, pipewirePromise, midishPromise]);
     return 0;
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);

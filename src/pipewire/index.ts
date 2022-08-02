@@ -309,6 +309,10 @@ export function watchPwDump(): [Promise<void>, Readable] {
       let openBracketIndex = stdoutBuf.indexOf("\n[");
       let closingBracketIndex = stdoutBuf.indexOf("\n]");
 
+      // the node process will buffer the output data and give it to us in chunks.
+      // we need to figure out when we have a full chunk of JSON that we are able
+      // to parse and emit to the output stream. I think there's a way of disabling
+      // the buffering but this solution seems to work fine
       while (openBracketIndex !== -1 && closingBracketIndex !== -1) {
         const data = stdoutBuf.slice(openBracketIndex, closingBracketIndex + 2);
 

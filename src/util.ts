@@ -1,9 +1,11 @@
 import { exec, ExecException } from "child_process";
+import { Readable } from "stream";
 import { WatchMidiState } from "./commands/watch_midi";
-import { Bindings, PassthroughBinding } from "./config";
+import { Bindings, PassthroughBinding, RuntimeConfig } from "./config";
 import { Button, Device, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
+import { midiEventToMidish } from "./midi/midish";
 
 const PORT_RE = /client (\d+): '(.*?)'/;
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
@@ -46,6 +48,42 @@ export function computeMappedVal(
 
   const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
   return Math.round(mappedPct * 16383);
+}
+
+export function manifestDialValue(
+  dialName: string,
+  value: number,
+  config: RuntimeConfig,
+  state: WatchMidiState,
+  midishIn: Readable
+) {
+  const dialBinding = Object.entries(config.bindings).find(
+    ([dial]) => dial === dialName
+  );
+
+  const dial = config.device.dials.find((d) => d.label === dialName);
+
+  if (
+    dial === undefined ||
+    dialBinding === undefined ||
+    dialBinding[1].type !== "passthrough"
+  ) {
+    return;
+  }
+
+  const newVal = computeMappedVal(value, dial, state, dialBinding[1]);
+
+  midishIn.push(
+    midiEventToMidish(
+      {
+        type: MidiEventType.ControlChange,
+        channel: dialBinding[1].outChannel,
+        controller: dialBinding[1].outController,
+        value: newVal,
+      },
+      { highPrecisionControl: true }
+    )
+  );
 }
 
 export function run(cmd: string): Promise<[string, string]> {
@@ -135,11 +173,11 @@ export function buttonLEDBytes(
 
 export function defaultLEDStates(
   bindings: Bindings,
-  devMapping: Device
+  device: Device
 ): ByteTriplet[] {
   return Object.entries(bindings)
     .map(([key, binding]) => {
-      const button = devMapping.buttons.find((b) => b.label === key);
+      const button = device.buttons.find((b) => b.label === key);
       if (button === undefined) {
         return undefined;
       }

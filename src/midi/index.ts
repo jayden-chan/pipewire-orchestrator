@@ -153,6 +153,8 @@ export function watchMidi(channel: string): [Promise<void>, Readable] {
             return undefined;
           }
 
+          debug("[midi-raw]", line);
+
           const b1 = parseInt(line.slice(0, 2), 16);
           const b2 = parseInt(line.slice(2, 4), 16);
           const b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;

@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { parse as YAMLParse } from "yaml";
 import { readFile } from "fs/promises";
 import { Device, Range } from "./devices";
 import { MidiEvent } from "./midi";
@@ -154,7 +155,11 @@ export type RuntimeConfig = Omit<Config, "device"> & {
 };
 
 export async function readConfig(path: string): Promise<Config> {
-  const contents = JSON.parse(await readFile(path, { encoding: "utf8" }));
+  const contents =
+    path.endsWith(".yaml") || path.endsWith(".yml")
+      ? YAMLParse(await readFile(path, { encoding: "utf8" }))
+      : JSON.parse(await readFile(path, { encoding: "utf8" }));
+
   const schema = await readFile(__dirname + "/config-schema.json", {
     encoding: "utf8",
   });

@@ -83,7 +83,11 @@ async function doActionBinding(
 ): Promise<void> {
   switch (binding.type) {
     case "command":
-      return run(binding.command).then(() => Promise.resolve());
+      return run(binding.command)
+        .then(() => Promise.resolve())
+        .catch((err) => {
+          error("[run-command]", err);
+        });
     case "midi":
       midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
       return;

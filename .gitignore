@@ -3,3 +3,5 @@ node_modules
 *.swp
 *.env
 config.json
+config.yaml
+config.js

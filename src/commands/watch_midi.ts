@@ -43,16 +43,14 @@ import {
 } from "../util";
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
-type ButtonStates = Record<string, number>;
-type MuteStates = Record<string, boolean>;
-type DialStates = Record<string, number>;
 export type WatchMidiState = {
   shiftPressed: boolean;
   rofiOpen: boolean;
   ranges: RangeStates;
-  mutes: MuteStates;
-  dials: DialStates;
-  buttons: ButtonStates;
+  mutes: Record<string, boolean>;
+  dials: Record<string, number>;
+  buttons: Record<string, number>;
+  buttonColors: Record<string, string>;
   pipewire: {
     state: PipewireDump;
     timeout: NodeJS.Timeout | undefined;
@@ -115,103 +113,106 @@ async function doActionBinding(
       state.mutes[binding.dial] = false;
       controlVal = state.dials[binding.dial] ?? 0;
       ledBytes =
-        button && buttonLEDBytes(button, "GREEN", button.channel, button.note);
+        button &&
+        buttonLEDBytes(button, "GREEN", button.channel, button.note, state);
     } else {
       state.mutes[binding.dial] = true;
       controlVal = 0;
       ledBytes =
-        button && buttonLEDBytes(button, "RED", button.channel, button.note);
+        button &&
+        buttonLEDBytes(button, "RED", button.channel, button.note, state);
     }
 
     manifestDialValue(binding.dial, controlVal, config, state, midishIn);
     return amidiSend(config.outputMidi, [ledBytes]).catch(handleAmidiError);
   }
 
-  if (binding.type === "range") {
-    // if shift is pressed the button will activate "app selection mode"
-    // where the user can select which application to bind to this volume control
-    if (state.shiftPressed) {
-      const data =
-        button &&
-        // TODO: stop hard coding this
-        buttonLEDBytes(button, "AMBER_FLASHING", button.channel, button.note);
+  if (binding.type == "mixer::select") {
+    let resetLED = () => {};
+    if (button !== undefined) {
+      const initialButtonColor = state.buttonColors[button.label];
 
+      const data = buttonLEDBytes(
+        button,
+        binding.pendingColor,
+        button.channel,
+        button.note,
+        state
+      );
       amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
 
-      const sources: Record<string, NodeWithPorts> = Object.fromEntries(
-        audioClients(state.pipewire.state).map((item) => [
-          item.node.info?.props?.["application.name"],
-          item,
-        ])
-      );
-
-      const mixerChannels = mixerPorts(state.pipewire.state);
-      if (mixerChannels === undefined) {
-        return;
-      }
-
-      const resetLED = () => {
+      resetLED = () => {
         if (button !== undefined) {
           const data = buttonLEDBytes(
             button,
-            binding.modes[0].color,
+            initialButtonColor,
             button.channel,
-            button.note
+            button.note,
+            state
           );
           amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
         }
       };
-
-      state.rofiOpen = true;
-      const sourcesString = Object.keys(sources).join("\n");
-      const cmd = `echo "${sourcesString}" | rofi -dmenu -i -p "select source:" -theme links`;
-      run(cmd)
-        .then(([stdout]) => {
-          const source = sources[stdout.trim()];
-          const mixerChannel = Number(
-            binding.dial.slice(binding.dial.indexOf("Dial ") + 5)
-          );
-          const channel = mixerChannels[`Mixer Channel ${mixerChannel}`];
-          debug(`[mixer-set]`, mixerChannel, channel.ports);
-          connectAppToMixer(source, channel, state.pipewire.state).then(() =>
-            resetLED()
-          );
-        })
-        .catch((_) => resetLED())
-        .finally(() => (state.rofiOpen = false));
-    } else {
-      if (state.ranges[binding.dial] === undefined) {
-        const initialMode = binding.modes[0];
-        state.ranges[binding.dial] = {
-          range: initialMode.range,
-          idx: 0,
-        };
-      }
-
-      const newIdx =
-        (state.ranges[binding.dial].idx + 1) % binding.modes.length;
-      const newMode = binding.modes[newIdx];
-      state.ranges[binding.dial] = {
-        range: newMode.range,
-        idx: newIdx,
-      };
-
-      // update the dial value immediately so we don't get a jump
-      // in volume the next time the dial is moved
-      manifestDialValue(
-        binding.dial,
-        state.dials[binding.dial] ?? 0,
-        config,
-        state,
-        midishIn
-      );
-
-      const data =
-        button &&
-        buttonLEDBytes(button, newMode.color, button.channel, button.note);
-
-      amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
     }
+
+    const mixerChannels = mixerPorts(state.pipewire.state);
+    if (mixerChannels === undefined) {
+      return;
+    }
+
+    const sources: Record<string, NodeWithPorts> = Object.fromEntries(
+      audioClients(state.pipewire.state).map((item) => [
+        item.node.info?.props?.["application.name"],
+        item,
+      ])
+    );
+
+    state.rofiOpen = true;
+    const sourcesString = Object.keys(sources).join("\n");
+    const cmd = `echo "${sourcesString}" | rofi -dmenu -i -p "select source:" -theme links`;
+    return run(cmd)
+      .then(([stdout]) => {
+        const source = sources[stdout.trim()];
+        const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
+        connectAppToMixer(source, channel, state.pipewire.state).then(() =>
+          resetLED()
+        );
+      })
+      .catch((_) => resetLED())
+      .finally(() => (state.rofiOpen = false));
+  }
+
+  if (binding.type === "range") {
+    if (state.ranges[binding.dial] === undefined) {
+      const initialMode = binding.modes[0];
+      state.ranges[binding.dial] = {
+        range: initialMode.range,
+        idx: 0,
+      };
+    }
+
+    const newIdx = (state.ranges[binding.dial].idx + 1) % binding.modes.length;
+    const newMode = binding.modes[newIdx];
+    state.ranges[binding.dial] = {
+      range: newMode.range,
+      idx: newIdx,
+    };
+
+    // update the dial value immediately so we don't get a jump
+    // in volume the next time the dial is moved
+    manifestDialValue(
+      binding.dial,
+      state.dials[binding.dial] ?? 0,
+      config,
+      state,
+      midishIn
+    );
+
+    const data =
+      button &&
+      buttonLEDBytes(button, newMode.color, button.channel, button.note, state);
+
+    return amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
   }
 }
 
@@ -295,7 +296,8 @@ async function handleButtonBinding(
         button,
         (runningState ?? ["OFF"])[0],
         event.channel,
-        event.note
+        event.note,
+        state
       );
 
       amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
@@ -323,7 +325,8 @@ async function handleButtonBinding(
                 button,
                 onState[0],
                 event.channel,
-                event.note
+                event.note,
+                state
               );
               amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
             }
@@ -347,7 +350,8 @@ async function handleButtonBinding(
       button,
       newBind.color,
       event.channel,
-      event.note
+      event.note,
+      state
     );
 
     amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
@@ -445,14 +449,11 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   }
 
   const config: RuntimeConfig = { ...rawConfig, device };
-
-  // set up LED states on initialization
-  amidiSend(config.outputMidi, defaultLEDStates(config.bindings, device));
-
   const state: WatchMidiState = {
     shiftPressed: false,
     rofiOpen: false,
     buttons: {},
+    buttonColors: {},
     mutes: {},
     dials: {},
     pipewire: {
@@ -471,6 +472,12 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     },
     ranges: {},
   };
+
+  // set up LED states on initialization
+  amidiSend(
+    config.outputMidi,
+    defaultLEDStates(config.bindings, device, state)
+  );
 
   pipewire.on("data", (data) => {
     updateDump(data.toString(), state.pipewire.state);

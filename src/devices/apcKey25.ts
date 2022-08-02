@@ -2,6 +2,7 @@ import { Device } from ".";
 
 const BUTTON_GRID_LED_STATES = {
   OFF: 0,
+  ON: 1,
   GREEN: 1,
   GREEN_FLASHING: 2,
   RED: 3,

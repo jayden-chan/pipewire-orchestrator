@@ -150,7 +150,8 @@ export function buttonLEDBytes(
   button: Button,
   color: string | undefined,
   channel: number,
-  note: number
+  note: number,
+  state: WatchMidiState
 ): ByteTriplet | undefined {
   if (button.ledStates !== undefined && color !== undefined) {
     const ledState = Object.entries(button.ledStates).find(
@@ -162,6 +163,7 @@ export function buttonLEDBytes(
     if (ledState === undefined) {
       warn(`Button ${button.label} doesn't support requested color ${color}`);
     } else {
+      state.buttonColors[button.label] = color;
       return {
         b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
         b2: note,
@@ -173,7 +175,8 @@ export function buttonLEDBytes(
 
 export function defaultLEDStates(
   bindings: Bindings,
-  device: Device
+  device: Device,
+  state: WatchMidiState
 ): ByteTriplet[] {
   return Object.entries(bindings).flatMap(([key, buttonBind]) => {
     const button = device.buttons.find((b) => b.label === key);
@@ -188,45 +191,27 @@ export function defaultLEDStates(
       return [];
     });
 
-    const states: (ByteTriplet | undefined)[] = [];
+    const commands: (ByteTriplet | undefined)[] = [];
     binds.forEach((binding) => {
-      if (binding.type === "range") {
-        const mode = binding.modes[0];
-        states.push(
-          buttonLEDBytes(button, mode.color, button.channel, button.note)
-        );
-        return;
+      let color = "OFF";
+      switch (binding.type) {
+        case "command":
+        case "mute":
+          color = "ON";
+          break;
+        case "range":
+          color = binding.modes[0].color;
+          break;
+        case "cycle":
+          color = binding.items[0].color ?? "OFF";
+          break;
       }
 
-      if (binding.type === "mute") {
-        states.push(
-          buttonLEDBytes(button, "GREEN", button.channel, button.note)
-        );
-        return;
-      }
-
-      if (binding.type === "cycle") {
-        const color = binding.items[0].color ?? "OFF";
-        states.push(buttonLEDBytes(button, color, button.channel, button.note));
-        return;
-      }
-
-      if (binding.type === "command") {
-        const onState = Object.entries(button.ledStates ?? {}).find(
-          ([state]) => state === "ON" || state === "GREEN"
-        );
-
-        if (onState !== undefined) {
-          states.push({
-            b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | button.channel,
-            b2: button.note,
-            b3: onState[1],
-          });
-          return;
-        }
-      }
+      commands.push(
+        buttonLEDBytes(button, color, button.channel, button.note, state)
+      );
     });
 
-    return states.filter((state) => state !== undefined) as ByteTriplet[];
+    return commands.filter((state) => state !== undefined) as ByteTriplet[];
   });
 }

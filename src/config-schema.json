@@ -627,6 +627,30 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pendingColor": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "mixer::select"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -676,6 +700,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -725,6 +750,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -1103,6 +1129,30 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pendingColor": {
+                                                                    "type": "string"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "mixer::select"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -1152,6 +1202,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -1201,6 +1252,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -1284,6 +1336,30 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                            "properties": {
+                                                "channel": {
+                                                    "type": "number"
+                                                },
+                                                "pendingColor": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "mixer::select"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "channel",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        {
+                                            "additionalProperties": false,
+                                            "description": "Create a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -1333,6 +1409,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -1382,6 +1459,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -2019,6 +2097,30 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pendingColor": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "mixer::select"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -2068,6 +2170,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -2117,6 +2220,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -2495,6 +2599,30 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pendingColor": {
+                                                                    "type": "string"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "mixer::select"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -2544,6 +2672,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -2593,6 +2722,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -2676,6 +2806,30 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                            "properties": {
+                                                "channel": {
+                                                    "type": "number"
+                                                },
+                                                "pendingColor": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "mixer::select"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "channel",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        {
+                                            "additionalProperties": false,
+                                            "description": "Create a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -2725,6 +2879,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -2774,6 +2929,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -3411,6 +3567,30 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pendingColor": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "mixer::select"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -3460,6 +3640,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -3509,6 +3690,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -3887,6 +4069,30 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pendingColor": {
+                                                                    "type": "string"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "mixer::select"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -3936,6 +4142,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -3985,6 +4192,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -4068,6 +4276,30 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                            "properties": {
+                                                "channel": {
+                                                    "type": "number"
+                                                },
+                                                "pendingColor": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "mixer::select"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "channel",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        {
+                                            "additionalProperties": false,
+                                            "description": "Create a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -4117,6 +4349,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -4166,6 +4399,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -4803,6 +5037,30 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pendingColor": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "mixer::select"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -4852,6 +5110,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -4901,6 +5160,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -5279,6 +5539,30 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pendingColor": {
+                                                                    "type": "string"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "mixer::select"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -5328,6 +5612,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -5377,6 +5662,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -5460,6 +5746,30 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                            "properties": {
+                                                "channel": {
+                                                    "type": "number"
+                                                },
+                                                "pendingColor": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "mixer::select"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "channel",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        {
+                                            "additionalProperties": false,
+                                            "description": "Create a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -5509,6 +5819,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -5558,6 +5869,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -6195,6 +6507,30 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                                            "properties": {
+                                                                                "channel": {
+                                                                                    "type": "number"
+                                                                                },
+                                                                                "pendingColor": {
+                                                                                    "type": "string"
+                                                                                },
+                                                                                "type": {
+                                                                                    "enum": [
+                                                                                        "mixer::select"
+                                                                                    ],
+                                                                                    "type": "string"
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "channel",
+                                                                                "type"
+                                                                            ],
+                                                                            "type": "object"
+                                                                        },
+                                                                        {
+                                                                            "additionalProperties": false,
+                                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -6244,6 +6580,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -6293,6 +6630,7 @@
                                                                         },
                                                                         {
                                                                             "additionalProperties": false,
+                                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                                             "properties": {
                                                                                 "dest": {
                                                                                     "additionalProperties": false,
@@ -6671,6 +7009,30 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                            "properties": {
+                                                                "channel": {
+                                                                    "type": "number"
+                                                                },
+                                                                "pendingColor": {
+                                                                    "type": "string"
+                                                                },
+                                                                "type": {
+                                                                    "enum": [
+                                                                        "mixer::select"
+                                                                    ],
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "channel",
+                                                                "type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        {
+                                                            "additionalProperties": false,
+                                                            "description": "Create a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -6720,6 +7082,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -6769,6 +7132,7 @@
                                                         },
                                                         {
                                                             "additionalProperties": false,
+                                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                                             "properties": {
                                                                 "dest": {
                                                                     "additionalProperties": false,
@@ -6852,6 +7216,30 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                            "properties": {
+                                                "channel": {
+                                                    "type": "number"
+                                                },
+                                                "pendingColor": {
+                                                    "type": "string"
+                                                },
+                                                "type": {
+                                                    "enum": [
+                                                        "mixer::select"
+                                                    ],
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "channel",
+                                                "type"
+                                            ],
+                                            "type": "object"
+                                        },
+                                        {
+                                            "additionalProperties": false,
+                                            "description": "Create a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -6901,6 +7289,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -6950,6 +7339,7 @@
                                         },
                                         {
                                             "additionalProperties": false,
+                                            "description": "Destroy a link between two nodes and ports within PipeWire",
                                             "properties": {
                                                 "dest": {
                                                     "additionalProperties": false,
@@ -7349,6 +7739,30 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                    "properties": {
+                                                        "channel": {
+                                                            "type": "number"
+                                                        },
+                                                        "pendingColor": {
+                                                            "type": "string"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "mixer::select"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "channel",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "description": "Create a link between two nodes and ports within PipeWire",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
@@ -7398,6 +7812,7 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
@@ -7447,6 +7862,7 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Destroy a link between two nodes and ports within PipeWire",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
@@ -7814,6 +8230,30 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Open the selection prompt to assign an application\nto a mixer channel",
+                                                    "properties": {
+                                                        "channel": {
+                                                            "type": "number"
+                                                        },
+                                                        "pendingColor": {
+                                                            "type": "string"
+                                                        },
+                                                        "type": {
+                                                            "enum": [
+                                                                "mixer::select"
+                                                            ],
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "channel",
+                                                        "type"
+                                                    ],
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "additionalProperties": false,
+                                                    "description": "Create a link between two nodes and ports within PipeWire",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
@@ -7863,6 +8303,7 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,
@@ -7912,6 +8353,7 @@
                                                 },
                                                 {
                                                     "additionalProperties": false,
+                                                    "description": "Destroy a link between two nodes and ports within PipeWire",
                                                     "properties": {
                                                         "dest": {
                                                             "additionalProperties": false,

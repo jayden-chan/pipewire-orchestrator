@@ -78,6 +78,16 @@ export type ToggleMuteBinding = {
 };
 
 /**
+ * Open the selection prompt to assign an application
+ * to a mixer channel
+ */
+export type MixerSelectBinding = {
+  type: "mixer::select";
+  pendingColor?: string;
+  channel: number;
+};
+
+/**
  * Create a link between two nodes and ports within PipeWire
  */
 export type PipewireLinkBinding = {
@@ -114,7 +124,8 @@ export type ActionBinding =
   | PipewireLinkBinding
   | PipewireUnLinkBinding
   | PipewireExclusiveLinkBinding
-  | RangeBinding;
+  | RangeBinding
+  | MixerSelectBinding;
 
 export type ButtonBindAction =
   | CancelBinding

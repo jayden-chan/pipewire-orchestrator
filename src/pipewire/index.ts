@@ -140,10 +140,7 @@ export async function connectAppToMixer(
         ? channel.ports[0]
         : channel.ports[1];
 
-    const sourceName = port.info?.props?.["port.alias"];
-    const destName = destPort.info?.props?.["port.alias"];
-
-    const command = `pw-link "${sourceName}" "${destName}"`;
+    const command = `pw-link "${sourcePortId}" "${destPort.id}"`;
     log(`[command] ${command}`);
     const proms = [run(command).catch(handlePwLinkError)];
 
@@ -153,8 +150,7 @@ export async function connectAppToMixer(
       // remove any links that aren't the exclusive one specified
       srcLinks.links.forEach(([, dPort]) => {
         if (dPort.id !== destPort.id) {
-          const dName = dPort.info?.props?.["port.alias"];
-          const command = `pw-link -d "${sourceName}" "${dName}"`;
+          const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
           log(`[command] ${command}`);
           proms.push(run(command).catch(handlePwLinkError));
         }
@@ -229,21 +225,21 @@ async function modifyLink(
     return;
   }
 
-  const { srcNode, srcPort, destNode } = linkItems;
+  const { srcNode, srcPort, destNode, destPort } = linkItems;
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
   if (
     mode === "ensure" &&
     (srcLinks === undefined ||
       !srcLinks.links.some((link) => link[0].id === destNode.id))
   ) {
-    const command = `pw-link "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    const command = `pw-link "${srcPort.id}" "${destPort.id}"`;
     log(`[command] ${command}`);
     await run(command);
   } else if (
     mode === "destroy" &&
     srcLinks?.links.some((link) => link[0].id === destNode.id)
   ) {
-    const command = `pw-link -d "${src.node}:${src.port}" "${dest.node}:${dest.port}"`;
+    const command = `pw-link -d "${srcPort.id}" "${destPort.id}"`;
     log(`[command] ${command}`);
     await run(command);
   }
@@ -279,11 +275,9 @@ export async function exclusiveLink(
   const srcLinks = dump.links.forward[`${srcNode.id}:${srcPort.id}`];
   if (srcLinks !== undefined) {
     // remove any links that aren't the exclusive one specified
-    const sourceName = srcPort.info?.props?.["port.alias"];
     srcLinks.links.forEach(([, dPort]) => {
       if (dPort.id !== destPort.id) {
-        const destName = dPort.info?.props?.["port.alias"];
-        const command = `pw-link -d "${sourceName}" "${destName}"`;
+        const command = `pw-link -d "${srcPort.id}" "${dPort.id}"`;
         log(`[command] ${command}`);
         run(command).catch(handlePwLinkError);
       }

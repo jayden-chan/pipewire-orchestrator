@@ -62,7 +62,7 @@ export function midish(): [Promise<void>, Readable] {
     });
 
     let co = "out0";
-    const chanRe = /(out\d+)/;
+    const channelRe = /(out\d+)/;
 
     stream.on("data", (data) => {
       let midishCmd = data.toString() as string;
@@ -70,9 +70,9 @@ export function midish(): [Promise<void>, Readable] {
         midishCmd += "\n";
       }
 
-      const [, chan] = midishCmd.match(chanRe) ?? [];
-      if (chan !== undefined && chan !== co) {
-        co = chan;
+      const [, channel] = midishCmd.match(channelRe) ?? [];
+      if (channel !== undefined && channel !== co) {
+        co = channel;
         midishCmd = `co ${co}\n${midishCmd}`;
       }
 
@@ -85,19 +85,19 @@ export function midish(): [Promise<void>, Readable] {
       });
     });
 
-    const initSeq = [];
+    const initCommands = [];
 
     // set up the midish output device and
     // output channels 1-16 (0-indexed)
     // TODO: stop hard-coding the output device
-    initSeq.push(`dnew 0 "14:0" rw`);
-    initSeq.push("i");
+    initCommands.push(`dnew 0 "14:0" rw`);
+    initCommands.push("i");
     for (let i = 0; i < 16; i++) {
-      initSeq.push(`onew out${i} {0 ${i}}`);
+      initCommands.push(`onew out${i} {0 ${i}}`);
     }
-    initSeq.push("co out0");
+    initCommands.push("co out0");
 
-    cmd.stdin.write(initSeq.join("\n") + "\n", (err) => {
+    cmd.stdin.write(initCommands.join("\n") + "\n", (err) => {
       if (err) {
         reject({ error: err });
       }

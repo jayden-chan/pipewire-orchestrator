@@ -60,22 +60,6 @@ export type CycleBinding = {
 };
 
 /**
- * Specify binds for the press and release events
- * of a given button
- */
-export type MomentaryBinding = {
-  type: "momentary";
-  onPress: {
-    color?: string;
-    do: ActionBinding[];
-  };
-  onRelease: {
-    color?: string;
-    do: ActionBinding[];
-  };
-};
-
-/**
  * Cancel any current pending action. If there is no pending action
  * then the alt binding will be executed (if specified)
  */
@@ -119,22 +103,34 @@ export type ActionBinding =
   | PipewireExclusiveLinkBinding
   | RangeBinding;
 
-export type Binding =
-  | PassthroughBinding
+export type TmpBindingType =
   | CancelBinding
   | RangeBinding
   | CycleBinding
-  | ActionBinding
-  | MomentaryBinding;
+  | ActionBinding;
 
+export type ButtonBinding = {
+  type: "button";
+  onPress?: TmpBindingType[];
+  onLongPress?: TmpBindingType[];
+  onShiftPress?: TmpBindingType[];
+  onShiftLongPress?: TmpBindingType[];
+  onRelease?: TmpBindingType[];
+};
+
+export type DialBinding = PassthroughBinding;
+
+export type Binding = DialBinding | ButtonBinding;
+
+export type Label = string;
 export type Bindings = {
-  [key: string]: Binding;
+  [key: Label]: Binding;
 };
 
 export type Config = {
   connections: [string, string][];
   device: string;
-  virtMidi: string;
+  outputMidi: string;
   bindings: Bindings;
   pipewire: {
     rules: {

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { handlePwLinkError } from "../errors";
-import { error, log, warn } from "../logger";
+import { debug, error, log, warn } from "../logger";
 import { run } from "../util";
 import { Convert, PipewireItem, PipewireItemType } from "./types";
 
@@ -101,6 +101,19 @@ export function mixerPorts(
           i.info?.props?.["format.dsp"]?.includes("audio") &&
           i.info?.direction === "input"
       )
+      .sort((a, b) => {
+        const ain = "Audio Input ";
+        const aName = a.info?.props?.["port.name"] ?? "0";
+        const bName = b.info?.props?.["port.name"] ?? "0";
+        const aNum = Number(aName.replace(ain, ""));
+        const bNum = Number(bName.replace(ain, ""));
+        if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+          warn(
+            `[mixer-sort] encountered NaN port when parsing ${aName},${bName}`
+          );
+        }
+        return aNum - bNum;
+      })
       .reduce((acc, curr, i, arr) => {
         if (i % 2 === 0) {
           acc.push([

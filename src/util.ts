@@ -175,25 +175,40 @@ export function defaultLEDStates(
   bindings: Bindings,
   device: Device
 ): ByteTriplet[] {
-  return Object.entries(bindings)
-    .map(([key, binding]) => {
-      const button = device.buttons.find((b) => b.label === key);
-      if (button === undefined) {
-        return undefined;
-      }
+  return Object.entries(bindings).flatMap(([key, buttonBind]) => {
+    const button = device.buttons.find((b) => b.label === key);
+    if (button === undefined || buttonBind.type === "passthrough") {
+      return [];
+    }
 
+    const binds = Object.values(buttonBind).flatMap((val) => {
+      if (val !== "button") {
+        return val;
+      }
+      return [];
+    });
+
+    const states: (ByteTriplet | undefined)[] = [];
+    binds.forEach((binding) => {
       if (binding.type === "range") {
         const mode = binding.modes[0];
-        return buttonLEDBytes(button, mode.color, button.channel, button.note);
+        states.push(
+          buttonLEDBytes(button, mode.color, button.channel, button.note)
+        );
+        return;
       }
 
       if (binding.type === "mute") {
-        return buttonLEDBytes(button, "GREEN", button.channel, button.note);
+        states.push(
+          buttonLEDBytes(button, "GREEN", button.channel, button.note)
+        );
+        return;
       }
 
       if (binding.type === "cycle") {
         const color = binding.items[0].color ?? "OFF";
-        return buttonLEDBytes(button, color, button.channel, button.note);
+        states.push(buttonLEDBytes(button, color, button.channel, button.note));
+        return;
       }
 
       if (binding.type === "command") {
@@ -202,13 +217,16 @@ export function defaultLEDStates(
         );
 
         if (onState !== undefined) {
-          return {
+          states.push({
             b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | button.channel,
             b2: button.note,
             b3: onState[1],
-          };
+          });
+          return;
         }
       }
-    })
-    .filter((f) => f !== undefined) as ByteTriplet[];
+    });
+
+    return states.filter((state) => state !== undefined) as ByteTriplet[];
+  });
 }

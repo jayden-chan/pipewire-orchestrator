@@ -1,9 +1,9 @@
-import { Convert, PipewireItem, PipewireItemType } from "./types";
-import { Readable } from "stream";
-import { run } from "../util";
 import { spawn } from "child_process";
-import { error, log, warn } from "../logger";
+import { Readable } from "stream";
 import { handlePwLinkError } from "../commands/watch_midi";
+import { error, log, warn } from "../logger";
+import { run } from "../util";
+import { Convert, PipewireItem, PipewireItemType } from "./types";
 
 export const findPwNode = (searchTerm: string) => {
   return (item: PipewireItem) => {

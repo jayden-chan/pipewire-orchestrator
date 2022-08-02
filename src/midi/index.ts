@@ -19,47 +19,61 @@ export enum MidiEventType {
   PitchBend = "PITCH_BEND",
 }
 
+export type MidiEventNoteOn = {
+  type: MidiEventType.NoteOn;
+  channel: number;
+  note: number;
+  velocity: number;
+};
+
+export type MidiEventNoteOff = {
+  type: MidiEventType.NoteOff;
+  channel: number;
+  note: number;
+  velocity: number;
+};
+
+export type MidiEventPolyphonicAftertouch = {
+  type: MidiEventType.PolyphonicAftertouch;
+  channel: number;
+  note: number;
+  pressure: number;
+};
+
+export type MidiEventControlChange = {
+  type: MidiEventType.ControlChange;
+  channel: number;
+  controller: number;
+  value: number;
+};
+
+export type MidiEventProgramChange = {
+  type: MidiEventType.ProgramChange;
+  channel: number;
+  program: number;
+};
+
+export type MidiEventChannelPressureAftertouch = {
+  type: MidiEventType.ChannelPressureAftertouch;
+  channel: number;
+  pressure: number;
+};
+
+export type MidiEventPitchBend = {
+  type: MidiEventType.PitchBend;
+  channel: number;
+  lsb: number;
+  msb: number;
+};
+
 export type MidiEvent =
-  | {
-      type: MidiEventType.NoteOn;
-      channel: number;
-      note: number;
-      velocity: number;
-    }
-  | {
-      type: MidiEventType.NoteOff;
-      channel: number;
-      note: number;
-      velocity: number;
-    }
-  | {
-      type: MidiEventType.PolyphonicAftertouch;
-      channel: number;
-      note: number;
-      pressure: number;
-    }
-  | {
-      type: MidiEventType.ControlChange;
-      channel: number;
-      controller: number;
-      value: number;
-    }
-  | {
-      type: MidiEventType.ProgramChange;
-      channel: number;
-      program: number;
-    }
-  | {
-      type: MidiEventType.ChannelPressureAftertouch;
-      channel: number;
-      pressure: number;
-    }
-  | {
-      type: MidiEventType.PitchBend;
-      channel: number;
-      lsb: number;
-      msb: number;
-    };
+  | MidiEventNoteOn
+  | MidiEventNoteOff
+  | MidiEventPolyphonicAftertouch
+  | MidiEventControlChange
+  | MidiEventProgramChange
+  | MidiEventChannelPressureAftertouch
+  | MidiEventPitchBend;
 
 export function midiEventToNumber(event: MidiEventType): number {
   switch (event) {

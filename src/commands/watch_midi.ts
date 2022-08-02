@@ -2,11 +2,15 @@ import { Readable } from "stream";
 import { ActionBinding, readConfig, RuntimeConfig } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
+import { handleAmidiError, handlePwLinkError } from "../errors";
 import { debug, error, log } from "../logger";
 import {
   amidiSend,
   ByteTriplet,
   MidiEvent,
+  MidiEventControlChange,
+  MidiEventNoteOff,
+  MidiEventNoteOn,
   MidiEventType,
   watchMidi,
 } from "../midi";
@@ -33,80 +37,65 @@ import {
   run,
 } from "../util";
 
+type RangeStates = Record<string, { range: Range; idx: number }>;
+type ButtonStates = Record<string, number>;
+type MuteStates = Record<string, boolean>;
+type DialStates = Record<string, number>;
+export type WatchMidiState = {
+  shiftPressed: boolean;
+  rofiOpen: boolean;
+  ranges: RangeStates;
+  mutes: MuteStates;
+  dials: DialStates;
+  buttons: ButtonStates;
+  pipewire: {
+    state: PipewireDump;
+    timeout: NodeJS.Timeout | undefined;
+    prevDevices: Record<string, boolean>;
+  };
+};
+
 const UPDATE_HOOK_TIMEOUT_MS = 150;
 const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
 };
 
-const handleAmidiError = (err: any) =>
-  error("failed to send midi to amidi:", err);
-
-export const handlePwLinkError = (err: any) => {
-  if (err instanceof Error) {
-    if (
-      !err.message.includes(
-        "failed to unlink ports: No such file or directory"
-      ) &&
-      !err.message.includes("failed to link ports: File exists")
-    ) {
-      error(err);
-      throw err;
-    }
-  }
+const findButton = (event: MidiEventNoteOn | MidiEventNoteOff) => {
+  return (b: Button) => b.channel === event.channel && b.note === event.note;
 };
 
-const findButton = (event: MidiEvent) => {
-  if (
-    event.type === MidiEventType.NoteOn ||
-    event.type === MidiEventType.NoteOff
-  ) {
-    return (b: Button) => b.channel === event.channel && b.note === event.note;
-  }
+const findDial = (event: MidiEventControlChange) => {
+  return (b: Dial) =>
+    b.channel === event.channel && b.controller === event.controller;
 };
 
-const findDial = (event: MidiEvent) => {
-  if (event.type === MidiEventType.ControlChange) {
-    return (b: Dial) =>
-      b.channel === event.channel && b.controller === event.controller;
-  }
-};
-
-async function handleBinding(
+async function doActionBinding(
   binding: ActionBinding,
   config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState,
   button?: Button
 ): Promise<void> {
-  if (binding.type === "command") {
-    return run(binding.command).then(() => Promise.resolve());
-  }
-
-  if (binding.type === "midi") {
-    const midishCmd = binding.events.map(midiEventToMidish).join("\n");
-    midishIn.push(midishCmd);
-    return;
-  }
-
-  if (binding.type === "pipewire::link") {
-    ensureLink(binding.src, binding.dest, state.pipewire.state).catch(
-      handlePwLinkError
-    );
-    return;
-  }
-
-  if (binding.type === "pipewire::unlink") {
-    destroyLink(binding.src, binding.dest, state.pipewire.state).catch(
-      handlePwLinkError
-    );
-    return;
-  }
-
-  if (binding.type === "pipewire::exclusive_link") {
-    exclusiveLink(binding.src, binding.dest, state.pipewire.state).catch(
-      handlePwLinkError
-    );
-    return;
+  switch (binding.type) {
+    case "command":
+      return run(binding.command).then(() => Promise.resolve());
+    case "midi":
+      midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
+      return;
+    case "pipewire::link":
+      return ensureLink(binding.src, binding.dest, state.pipewire.state).catch(
+        handlePwLinkError
+      );
+    case "pipewire::unlink":
+      return destroyLink(binding.src, binding.dest, state.pipewire.state).catch(
+        handlePwLinkError
+      );
+    case "pipewire::exclusive_link":
+      return exclusiveLink(
+        binding.src,
+        binding.dest,
+        state.pipewire.state
+      ).catch(handlePwLinkError);
   }
 
   if (binding.type === "mute") {
@@ -130,6 +119,8 @@ async function handleBinding(
   }
 
   if (binding.type === "range") {
+    // if shift is pressed the button will activate "app selection mode"
+    // where the user can select which application to bind to this volume control
     if (state.shiftPressed) {
       const data =
         button &&
@@ -163,11 +154,9 @@ async function handleBinding(
       };
 
       state.rofiOpen = true;
-      run(
-        `echo "${Object.keys(sources).join(
-          "\n"
-        )}" | rofi -dmenu -i -p "select source:" -theme links`
-      )
+      const sourcesString = Object.keys(sources).join("\n");
+      const cmd = `echo "${sourcesString}" | rofi -dmenu -i -p "select source:" -theme links`;
+      run(cmd)
         .then(([stdout]) => {
           const source = sources[stdout.trim()];
           const mixerChannel = Number(
@@ -209,21 +198,16 @@ async function handleBinding(
 }
 
 async function handleNoteOn(
-  event: MidiEvent,
+  event: MidiEventNoteOn,
   config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ): Promise<void> {
-  if (event.type !== MidiEventType.NoteOn) {
-    return;
-  }
-
   if (event.channel === config.device.keys.channel) {
     debug(`Key ON ${event.note} velocity ${event.velocity}`);
     return;
   }
 
-  const key = `${event.channel}:${event.note}`;
   const button = config.device.buttons.find(
     (b) => b.channel === event.channel && b.note === event.note
   );
@@ -240,147 +224,120 @@ async function handleNoteOn(
 
   debug("[button pressed]", button.label);
   const binding = config.bindings[button.label];
-  if (binding !== undefined) {
-    if (binding.type === "passthrough") {
-      // cannot passthrough note events (yet)
-      return;
+  // cannot passthrough note events (yet)
+  if (binding === undefined || binding.type === "passthrough") {
+    return;
+  }
+
+  if (binding.type === "cancel") {
+    if (state.rofiOpen) {
+      run("xdotool key Escape").catch((err) => error(err));
+    } else if (binding.alt !== undefined) {
+      return doActionBinding(binding.alt, config, midishIn, state, button);
+    }
+    return;
+  }
+
+  if (binding.type === "command") {
+    if (state.buttons[button.label] === undefined) {
+      const runningState = Object.entries(button.ledStates ?? {}).find(
+        // TODO: stop hard coding this
+        ([state]) => state === "AMBER"
+      );
+
+      const data = buttonLEDBytes(
+        button,
+        (runningState ?? ["OFF"])[0],
+        event.channel,
+        event.note
+      );
+
+      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
     }
 
-    if (binding.type === "cancel") {
-      if (state.rofiOpen) {
-        run("xdotool key Escape").catch((err) => error(err));
-      } else if (binding.alt !== undefined) {
-        return handleBinding(binding.alt, config, midishIn, state, button);
-      }
-      return;
-    }
+    const timestamp = new Date().valueOf();
+    state.buttons[button.label] = timestamp;
 
-    if (binding.type === "command") {
-      if (state.buttons[button.label] === undefined) {
-        const runningState = Object.entries(button.ledStates ?? {}).find(
-          // TODO: stop hard coding this
-          ([state]) => state === "AMBER"
-        );
-
-        const data = buttonLEDBytes(
-          button,
-          (runningState ?? ["OFF"])[0],
-          event.channel,
-          event.note
-        );
-
-        amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      }
-
-      const timestamp = new Date().valueOf();
-      state.buttons[button.label] = timestamp;
-
-      return handleBinding(binding, config, midishIn, state, button).then(
-        () => {
-          if (state.buttons[button.label] !== timestamp) {
-            return;
-          }
-
-          delete state.buttons[button.label];
-
-          setTimeout(
-            () => {
-              const onState = Object.entries(button.ledStates ?? {}).find(
-                ([state]) => state === "ON" || state === "GREEN"
-              );
-
-              if (onState !== undefined) {
-                const data = buttonLEDBytes(
-                  button,
-                  onState[0],
-                  event.channel,
-                  event.note
-                );
-                amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-              }
-            },
-            new Date().valueOf() - timestamp < 150 ? 150 : 0
-          );
+    return doActionBinding(binding, config, midishIn, state, button).then(
+      () => {
+        if (state.buttons[button.label] !== timestamp) {
+          return;
         }
-      );
-    }
 
-    if (binding.type === "cycle") {
-      if (state.buttons[button.label] === undefined) {
-        state.buttons[button.label] = 1;
-      } else {
-        state.buttons[button.label] =
-          (state.buttons[button.label] + 1) % binding.items.length;
+        delete state.buttons[button.label];
+
+        setTimeout(
+          () => {
+            const onState = Object.entries(button.ledStates ?? {}).find(
+              ([state]) => state === "ON" || state === "GREEN"
+            );
+
+            if (onState !== undefined) {
+              const data = buttonLEDBytes(
+                button,
+                onState[0],
+                event.channel,
+                event.note
+              );
+              amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+            }
+          },
+          new Date().valueOf() - timestamp < 150 ? 150 : 0
+        );
       }
-
-      const newBind = binding.items[state.buttons[button.label]];
-      const data = buttonLEDBytes(
-        button,
-        newBind.color,
-        event.channel,
-        event.note
-      );
-
-      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-      return Promise.all(
-        newBind.actions.map((bind) => {
-          return handleBinding(bind, config, midishIn, state, button);
-        })
-      ).then(() => Promise.resolve());
-    }
-
-    if (binding.type === "momentary") {
-      const data = buttonLEDBytes(
-        button,
-        binding.onPress.color,
-        event.channel,
-        event.note
-      );
-
-      amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
-
-      return Promise.all(
-        binding.onPress.do.map((bind) => {
-          return handleBinding(bind, config, midishIn, state, button);
-        })
-      ).then(() => Promise.resolve());
-    }
-
-    return handleBinding(binding, config, midishIn, state, button);
-  }
-
-  // default behavior for button that isn't bound to anything.
-  // just cycle through the colors
-  if (button.ledStates !== undefined) {
-    const ledStates = Object.keys(button.ledStates).filter(
-      (state) => !state.includes("FLASHING")
     );
-    const numLedStates = ledStates.length;
-    if (!state.buttons[key]) {
-      state.buttons[key] = 1;
+  }
+
+  if (binding.type === "cycle") {
+    if (state.buttons[button.label] === undefined) {
+      state.buttons[button.label] = 1;
     } else {
-      state.buttons[key] = (state.buttons[key] + 1) % numLedStates;
+      state.buttons[button.label] =
+        (state.buttons[button.label] + 1) % binding.items.length;
     }
 
-    const data = {
-      b1: (0b1001 << 4) | event.channel,
-      b2: event.note,
-      b3: button.ledStates[ledStates[state.buttons[key]]],
-    };
-    return amidiSend(config.virtMidi, [data]);
+    const newBind = binding.items[state.buttons[button.label]];
+    const data = buttonLEDBytes(
+      button,
+      newBind.color,
+      event.channel,
+      event.note
+    );
+
+    amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+    return Promise.all(
+      newBind.actions.map((bind) => {
+        return doActionBinding(bind, config, midishIn, state, button);
+      })
+    ).then(() => Promise.resolve());
   }
+
+  if (binding.type === "momentary") {
+    const data = buttonLEDBytes(
+      button,
+      binding.onPress.color,
+      event.channel,
+      event.note
+    );
+
+    amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
+
+    return Promise.all(
+      binding.onPress.do.map((bind) => {
+        return doActionBinding(bind, config, midishIn, state, button);
+      })
+    ).then(() => Promise.resolve());
+  }
+
+  return doActionBinding(binding, config, midishIn, state, button);
 }
 
 function handleNoteOff(
-  event: MidiEvent,
+  event: MidiEventNoteOff,
   config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ) {
-  if (event.type !== MidiEventType.NoteOff) {
-    return;
-  }
-
   if (event.channel === config.device.keys.channel) {
     debug(`Key OFF ${event.note} velocity ${event.velocity}`);
     return;
@@ -404,21 +361,17 @@ function handleNoteOff(
     amidiSend(config.virtMidi, [data]).catch(handleAmidiError);
 
     binding.onRelease.do.forEach((bind) => {
-      handleBinding(bind, config, midishIn, state, button);
+      doActionBinding(bind, config, midishIn, state, button);
     });
   }
 }
 
 function handleControlChange(
-  event: MidiEvent,
+  event: MidiEventControlChange,
   config: RuntimeConfig,
   midishIn: Readable,
   state: WatchMidiState
 ) {
-  if (event.type !== MidiEventType.ControlChange) {
-    return;
-  }
-
   // shift key disables dials. useful for changing
   // dial ranges without having skips in output
   if (state.shiftPressed) {
@@ -433,36 +386,19 @@ function handleControlChange(
   }
 }
 
-type RangeStates = Record<string, { range: Range; idx: number }>;
-type ButtonStates = Record<string, number>;
-type MuteStates = Record<string, boolean>;
-type DialStates = Record<string, number>;
-export type WatchMidiState = {
-  shiftPressed: boolean;
-  rofiOpen: boolean;
-  ranges: RangeStates;
-  mutes: MuteStates;
-  dials: DialStates;
-  buttons: ButtonStates;
-  pipewire: {
-    state: PipewireDump;
-    prevDevices: Record<string, boolean>;
-  };
-};
-
 export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const rawConfig = await readConfig(configPath);
   log("Loaded config file");
+
   const dev = rawConfig.device;
-
-  for (const [d1, d2] of rawConfig.connections) {
-    await connectMidiDevices(d1, d2);
-  }
-
   const devicePort = await findDevicePort(dev);
   if (!devicePort) {
     error("Failed to extract port from device listing");
     return 1;
+  }
+
+  for (const [d1, d2] of rawConfig.connections) {
+    await connectMidiDevices(d1, d2);
   }
 
   const [watchMidiPromise, stream] = watchMidi(devicePort);
@@ -487,6 +423,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     mutes: {},
     dials: {},
     pipewire: {
+      timeout: undefined,
       prevDevices: Object.fromEntries([
         ...config.pipewire.rules.onConnect.map((rule) => [rule.node, false]),
         ...config.pipewire.rules.onDisconnect.map((rule) => [rule.node, true]),
@@ -513,45 +450,44 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     ),
   };
 
-  let pipewireTimeout: NodeJS.Timeout | undefined = undefined;
-
   pipewire.on("data", (data) => {
     updateDump(data.toString(), state.pipewire.state);
 
-    if (pipewireTimeout !== undefined) {
-      pipewireTimeout.refresh();
-    } else {
-      pipewireTimeout = setTimeout(() => {
-        const pwItems = Object.values(state.pipewire.state.items);
-        config.pipewire.rules.onConnect.forEach((rule) => {
-          if (state.pipewire.prevDevices[rule.node] === true) return;
-
-          const hasDevice = pwItems.some(findPwNode(rule.node));
-
-          if (hasDevice) {
-            rule.do.forEach((binding) => {
-              handleBinding(binding, config, midishIn, state);
-            });
-          }
-        });
-
-        config.pipewire.rules.onDisconnect.forEach((rule) => {
-          if (state.pipewire.prevDevices[rule.node] === false) return;
-
-          const hasDevice = pwItems.some(findPwNode(rule.node));
-
-          if (!hasDevice) {
-            rule.do.forEach((binding) => {
-              handleBinding(binding, config, midishIn, state);
-            });
-          }
-        });
-
-        Object.keys(state.pipewire.prevDevices).forEach((device) => {
-          state.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));
-        });
-      }, UPDATE_HOOK_TIMEOUT_MS);
+    if (state.pipewire.timeout !== undefined) {
+      state.pipewire.timeout.refresh();
+      return;
     }
+
+    state.pipewire.timeout = setTimeout(() => {
+      const pwItems = Object.values(state.pipewire.state.items);
+      config.pipewire.rules.onConnect.forEach((rule) => {
+        if (state.pipewire.prevDevices[rule.node] === true) return;
+
+        const hasDevice = pwItems.some(findPwNode(rule.node));
+
+        if (hasDevice) {
+          rule.do.forEach((binding) => {
+            doActionBinding(binding, config, midishIn, state);
+          });
+        }
+      });
+
+      config.pipewire.rules.onDisconnect.forEach((rule) => {
+        if (state.pipewire.prevDevices[rule.node] === false) return;
+
+        const hasDevice = pwItems.some(findPwNode(rule.node));
+
+        if (!hasDevice) {
+          rule.do.forEach((binding) => {
+            doActionBinding(binding, config, midishIn, state);
+          });
+        }
+      });
+
+      Object.keys(state.pipewire.prevDevices).forEach((device) => {
+        state.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));
+      });
+    }, UPDATE_HOOK_TIMEOUT_MS);
   });
 
   stream.on("data", (data) => {

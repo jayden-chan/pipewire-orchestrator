@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { handlePwLinkError } from "../commands/watch_midi";
+import { handlePwLinkError } from "../errors";
 import { error, log, warn } from "../logger";
 import { run } from "../util";
 import { Convert, PipewireItem, PipewireItemType } from "./types";

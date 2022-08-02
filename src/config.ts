@@ -115,7 +115,6 @@ export type ButtonBinding = {
   onPress?: TmpBindingType[];
   // FIXME: not implemented
   onLongPress?: TmpBindingType[];
-  // FIXME: not implemented
   onShiftPress?: TmpBindingType[];
   // FIXME: not implemented
   onShiftLongPress?: TmpBindingType[];

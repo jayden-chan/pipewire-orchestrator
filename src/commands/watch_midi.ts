@@ -250,11 +250,21 @@ async function handleNoteOn(
     return;
   }
 
-  return Promise.all(
-    binding.onPress.map((bind) =>
-      handleButtonBinding(bind, button, event, state, config, midishIn)
-    )
-  ).then(() => Promise.resolve());
+  if (state.shiftPressed && binding.onShiftPress !== undefined) {
+    return Promise.all(
+      binding.onShiftPress.map((bind) =>
+        handleButtonBinding(bind, button, event, state, config, midishIn)
+      )
+    ).then(() => Promise.resolve());
+  }
+
+  if (!state.shiftPressed && binding.onPress !== undefined) {
+    return Promise.all(
+      binding.onPress.map((bind) =>
+        handleButtonBinding(bind, button, event, state, config, midishIn)
+      )
+    ).then(() => Promise.resolve());
+  }
 }
 
 async function handleButtonBinding(

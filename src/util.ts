@@ -186,7 +186,7 @@ export function defaultLEDStates(
 
     const binds = Object.values(buttonBind).flatMap((val) => {
       if (val !== "button") {
-        return val;
+        return val.actions;
       }
       return [];
     });

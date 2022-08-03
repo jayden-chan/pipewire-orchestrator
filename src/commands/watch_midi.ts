@@ -252,16 +252,36 @@ async function handleNoteOn(
   }
 
   if (state.shiftPressed && binding.onShiftPress !== undefined) {
+    amidiSend(config.outputMidi, [
+      buttonLEDBytes(
+        button,
+        binding.onShiftPress.color,
+        button.channel,
+        button.note,
+        state
+      ),
+    ]);
+
     return Promise.all(
-      binding.onShiftPress.map((bind) =>
+      binding.onShiftPress.actions.map((bind) =>
         handleButtonBinding(bind, button, event, state, config, midishIn)
       )
     ).then(() => Promise.resolve());
   }
 
   if (!state.shiftPressed && binding.onPress !== undefined) {
+    amidiSend(config.outputMidi, [
+      buttonLEDBytes(
+        button,
+        binding.onPress.color,
+        button.channel,
+        button.note,
+        state
+      ),
+    ]);
+
     return Promise.all(
-      binding.onPress.map((bind) =>
+      binding.onPress.actions.map((bind) =>
         handleButtonBinding(bind, button, event, state, config, midishIn)
       )
     ).then(() => Promise.resolve());
@@ -396,8 +416,18 @@ function handleNoteOff(
     return;
   }
 
+  amidiSend(config.outputMidi, [
+    buttonLEDBytes(
+      button,
+      binding.onRelease.color,
+      button.channel,
+      button.note,
+      state
+    ),
+  ]);
+
   return Promise.all(
-    binding.onRelease.map((bind) =>
+    binding.onRelease.actions.map((bind) =>
       handleButtonBinding(bind, button, event, state, config, midishIn)
     )
   ).then(() => Promise.resolve());

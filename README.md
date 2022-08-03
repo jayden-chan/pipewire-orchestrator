@@ -20,7 +20,7 @@ aconnect <virtual device id> <hardware device id>
 ## Todo
 
 - [x] Batch hex requests to amidi
-- [ ] Dial layers
+- [ ] Layers
 - [x] Shift key to turn dials without sending input
 - [x] Mute controls for dials
 - [ ] Guitar amp selection with buttons

@@ -133,15 +133,20 @@ export type ButtonBindAction =
   | CycleBinding
   | ActionBinding;
 
+export type ActionsWithColor = {
+  actions: ButtonBindAction[];
+  color?: string;
+};
+
 export type ButtonBinding = {
   type: "button";
-  onPress?: ButtonBindAction[];
+  onPress?: ActionsWithColor;
   // FIXME: not implemented
-  onLongPress?: ButtonBindAction[];
-  onShiftPress?: ButtonBindAction[];
+  onLongPress?: ActionsWithColor;
+  onShiftPress?: ActionsWithColor;
   // FIXME: not implemented
-  onShiftLongPress?: ButtonBindAction[];
-  onRelease?: ButtonBindAction[];
+  onShiftLongPress?: ActionsWithColor;
+  onRelease?: ActionsWithColor;
 };
 
 export type DialBinding = PassthroughBinding;

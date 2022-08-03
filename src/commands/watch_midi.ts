@@ -51,6 +51,7 @@ export type WatchMidiState = {
   dials: Record<string, number>;
   buttons: Record<string, number>;
   buttonColors: Record<string, string>;
+  buttonTimeouts: Record<string, NodeJS.Timeout>;
   pipewire: {
     state: PipewireDump;
     timeout: NodeJS.Timeout | undefined;
@@ -243,33 +244,63 @@ async function handleNoteOn(
 
   debug("[button pressed]", button.label);
   const binding = config.bindings[button.label];
-  if (
-    binding === undefined ||
-    binding.type !== "button" ||
-    binding.onPress === undefined
-  ) {
+  if (binding === undefined || binding.type !== "button") {
     return;
   }
 
-  if (state.shiftPressed && binding.onShiftPress !== undefined) {
-    amidiSend(config.outputMidi, [
-      buttonLEDBytes(
-        button,
-        binding.onShiftPress.color,
-        button.channel,
-        button.note,
-        state
-      ),
-    ]);
+  if (state.shiftPressed) {
+    if (binding.onShiftLongPress !== undefined) {
+      const lp = binding.onShiftLongPress;
+      state.buttonTimeouts[button.label] = setTimeout(() => {
+        amidiSend(config.outputMidi, [
+          buttonLEDBytes(button, lp.color, button.channel, button.note, state),
+        ]);
 
-    return Promise.all(
-      binding.onShiftPress.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, state, config, midishIn)
-      )
-    ).then(() => Promise.resolve());
+        Promise.all(
+          lp.actions.map((bind) =>
+            handleButtonBinding(bind, button, event, state, config, midishIn)
+          )
+        ).then(() => Promise.resolve());
+      }, lp.timeout);
+    }
+
+    if (binding.onShiftPress !== undefined) {
+      amidiSend(config.outputMidi, [
+        buttonLEDBytes(
+          button,
+          binding.onShiftPress.color,
+          button.channel,
+          button.note,
+          state
+        ),
+      ]);
+
+      return Promise.all(
+        binding.onShiftPress.actions.map((bind) =>
+          handleButtonBinding(bind, button, event, state, config, midishIn)
+        )
+      ).then(() => Promise.resolve());
+    }
+
+    return;
   }
 
-  if (!state.shiftPressed && binding.onPress !== undefined) {
+  if (binding.onLongPress !== undefined) {
+    const lp = binding.onLongPress;
+    state.buttonTimeouts[button.label] = setTimeout(() => {
+      amidiSend(config.outputMidi, [
+        buttonLEDBytes(button, lp.color, button.channel, button.note, state),
+      ]);
+
+      Promise.all(
+        lp.actions.map((bind) =>
+          handleButtonBinding(bind, button, event, state, config, midishIn)
+        )
+      ).then(() => Promise.resolve());
+    }, lp.timeout);
+  }
+
+  if (binding.onPress !== undefined) {
     amidiSend(config.outputMidi, [
       buttonLEDBytes(
         button,
@@ -408,29 +439,32 @@ function handleNoteOff(
   }
 
   const binding = config.bindings[button.label];
-  if (
-    binding === undefined ||
-    binding.type !== "button" ||
-    binding.onRelease === undefined
-  ) {
+  if (binding === undefined || binding.type !== "button") {
     return;
   }
 
-  amidiSend(config.outputMidi, [
-    buttonLEDBytes(
-      button,
-      binding.onRelease.color,
-      button.channel,
-      button.note,
-      state
-    ),
-  ]);
+  if (state.buttonTimeouts[button.label] !== undefined) {
+    clearTimeout(state.buttonTimeouts[button.label]);
+    delete state.buttonTimeouts[button.label];
+  }
 
-  return Promise.all(
-    binding.onRelease.actions.map((bind) =>
-      handleButtonBinding(bind, button, event, state, config, midishIn)
-    )
-  ).then(() => Promise.resolve());
+  if (binding.onRelease !== undefined) {
+    amidiSend(config.outputMidi, [
+      buttonLEDBytes(
+        button,
+        binding.onRelease.color,
+        button.channel,
+        button.note,
+        state
+      ),
+    ]);
+
+    return Promise.all(
+      binding.onRelease.actions.map((bind) =>
+        handleButtonBinding(bind, button, event, state, config, midishIn)
+      )
+    ).then(() => Promise.resolve());
+  }
 }
 
 function handleControlChange(
@@ -484,6 +518,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     rofiOpen: false,
     buttons: {},
     buttonColors: {},
+    buttonTimeouts: {},
     mutes: {},
     dials: {},
     pipewire: {

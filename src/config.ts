@@ -133,20 +133,34 @@ export type ButtonBindAction =
   | CycleBinding
   | ActionBinding;
 
-export type ActionsWithColor = {
+/**
+ * Actions(s) to execute on a key event such as a key
+ * press or release
+ */
+export type KeyEventAction = {
   actions: ButtonBindAction[];
   color?: string;
 };
 
+// can't use a type intersection here with KeyEventAction
+// because it breaks typescript-json-schema for some reason
+
+/**
+ * Action(s) to execute on long press
+ */
+export type LongPressAction = {
+  actions: ButtonBindAction[];
+  color?: string;
+  timeout: number;
+};
+
 export type ButtonBinding = {
   type: "button";
-  onPress?: ActionsWithColor;
-  // FIXME: not implemented
-  onLongPress?: ActionsWithColor;
-  onShiftPress?: ActionsWithColor;
-  // FIXME: not implemented
-  onShiftLongPress?: ActionsWithColor;
-  onRelease?: ActionsWithColor;
+  onPress?: KeyEventAction;
+  onLongPress?: LongPressAction;
+  onShiftPress?: KeyEventAction;
+  onShiftLongPress?: LongPressAction;
+  onRelease?: KeyEventAction;
 };
 
 export type DialBinding = PassthroughBinding;

@@ -31,7 +31,7 @@ aconnect <virtual device id> <hardware device id>
 - [ ] Add TCP RPC
 - [x] Combine MIDI and Pipewire watch modes
 - [x] Use shift/other modifier key to open popup dialog for assigning dial to application
-- [ ] Add long press/momentary push functionality
+- [x] Add long press/momentary push functionality
 - [ ] Request parameter dump from midi device on startup
 - [x] Better error handling besides "it's wrong"
 - [ ] Round robin mixer channel assignment

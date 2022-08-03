@@ -38,12 +38,6 @@
                 }
             ]
         },
-        "ActionsWithColor": {
-            "$ref": "#/definitions/ActionsWithColor_1"
-        },
-        "ActionsWithColor_1": {
-            "$ref": "#/definitions/__type_3"
-        },
         "Bindings": {
             "$ref": "#/definitions/__type"
         },
@@ -58,6 +52,20 @@
         },
         "CycleBinding": {
             "$ref": "#/definitions/__type_14"
+        },
+        "KeyEventAction": {
+            "$ref": "#/definitions/KeyEventAction_1",
+            "description": "Actions(s) to execute on a key event such as a key\npress or release"
+        },
+        "KeyEventAction_1": {
+            "$ref": "#/definitions/__type_3"
+        },
+        "LongPressAction": {
+            "$ref": "#/definitions/LongPressAction_1",
+            "description": "Action(s) to execute on long press"
+        },
+        "LongPressAction_1": {
+            "$ref": "#/definitions/__type_22"
         },
         "MapFunction": {
             "enum": [
@@ -482,19 +490,19 @@
             "additionalProperties": false,
             "properties": {
                 "onLongPress": {
-                    "$ref": "#/definitions/ActionsWithColor"
+                    "$ref": "#/definitions/LongPressAction"
                 },
                 "onPress": {
-                    "$ref": "#/definitions/ActionsWithColor"
+                    "$ref": "#/definitions/KeyEventAction"
                 },
                 "onRelease": {
-                    "$ref": "#/definitions/ActionsWithColor"
+                    "$ref": "#/definitions/KeyEventAction"
                 },
                 "onShiftLongPress": {
-                    "$ref": "#/definitions/ActionsWithColor"
+                    "$ref": "#/definitions/LongPressAction"
                 },
                 "onShiftPress": {
-                    "$ref": "#/definitions/ActionsWithColor"
+                    "$ref": "#/definitions/KeyEventAction"
                 },
                 "type": {
                     "enum": [
@@ -551,8 +559,73 @@
             ],
             "type": "object"
         },
+        "__type_22": {
+            "additionalProperties": false,
+            "description": "Action(s) to execute on long press",
+            "properties": {
+                "actions": {
+                    "items": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/definitions/CommandBinding",
+                                "description": "Execute a shell command when the binding is activated"
+                            },
+                            {
+                                "$ref": "#/definitions/RangeBinding",
+                                "description": "Change the range of a dial when the binding is executed"
+                            },
+                            {
+                                "$ref": "#/definitions/MidiBinding",
+                                "description": "Emit a MIDI event when the binding is activated"
+                            },
+                            {
+                                "$ref": "#/definitions/CycleBinding",
+                                "description": "Cycle through the given sub-bindings each time the binding\nis activated"
+                            },
+                            {
+                                "$ref": "#/definitions/CancelBinding",
+                                "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)"
+                            },
+                            {
+                                "$ref": "#/definitions/ToggleMuteBinding",
+                                "description": "Toggle mute for the given dial"
+                            },
+                            {
+                                "$ref": "#/definitions/MixerSelectBinding",
+                                "description": "Open the selection prompt to assign an application\nto a mixer channel"
+                            },
+                            {
+                                "$ref": "#/definitions/PipewireLinkBinding",
+                                "description": "Create a link between two nodes and ports within PipeWire"
+                            },
+                            {
+                                "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                                "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
+                            },
+                            {
+                                "$ref": "#/definitions/PipewireUnLinkBinding",
+                                "description": "Destroy a link between two nodes and ports within PipeWire"
+                            }
+                        ]
+                    },
+                    "type": "array"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "timeout": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "actions",
+                "timeout"
+            ],
+            "type": "object"
+        },
         "__type_3": {
             "additionalProperties": false,
+            "description": "Actions(s) to execute on a key event such as a key\npress or release",
             "properties": {
                 "actions": {
                     "items": {

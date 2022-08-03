@@ -1,9 +1,9 @@
 import { Readable } from "stream";
 import {
   ActionBinding,
+  ButtonBindAction,
   readConfig,
   RuntimeConfig,
-  ButtonBindAction,
 } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";

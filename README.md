@@ -35,3 +35,14 @@ aconnect <virtual device id> <hardware device id>
 - [ ] Request parameter dump from midi device on startup
 - [x] Better error handling besides "it's wrong"
 - [ ] Round robin mixer channel assignment
+
+## Dev
+
+### Regenerating the config file JSON schema
+
+If you make a change to the `Config` type in `config.ts` you need to regenerate the
+config file JSON schema. Use the following command:
+
+```bash
+npx typescript-json-schema --aliasRefs --topRef --noExtraProps --required --strictNullChecks tsconfig.json Config > src/config-schema.json
+```

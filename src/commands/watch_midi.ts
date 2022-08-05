@@ -43,7 +43,8 @@ import {
 } from "../util";
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
-export type WatchMidiState = {
+export type WatchMidiContext = {
+  midishIn: Readable;
   shiftPressed: boolean;
   rofiOpen: boolean;
   ranges: RangeStates;
@@ -76,8 +77,7 @@ const findDial = (event: MidiEventControlChange) => {
 async function doActionBinding(
   binding: ActionBinding,
   config: RuntimeConfig,
-  midishIn: Readable,
-  state: WatchMidiState,
+  context: WatchMidiContext,
   button?: Button
 ): Promise<void> {
   switch (binding.type) {
@@ -88,21 +88,25 @@ async function doActionBinding(
           error("[run-command]", err);
         });
     case "midi":
-      midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
+      context.midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
       return;
     case "pipewire::link":
-      return ensureLink(binding.src, binding.dest, state.pipewire.state).catch(
-        handlePwLinkError
-      );
+      return ensureLink(
+        binding.src,
+        binding.dest,
+        context.pipewire.state
+      ).catch(handlePwLinkError);
     case "pipewire::unlink":
-      return destroyLink(binding.src, binding.dest, state.pipewire.state).catch(
-        handlePwLinkError
-      );
+      return destroyLink(
+        binding.src,
+        binding.dest,
+        context.pipewire.state
+      ).catch(handlePwLinkError);
     case "pipewire::exclusive_link":
       return exclusiveLink(
         binding.src,
         binding.dest,
-        state.pipewire.state
+        context.pipewire.state
       ).catch(handlePwLinkError);
   }
 
@@ -110,35 +114,35 @@ async function doActionBinding(
     let controlVal = 0;
     let ledBytes: ByteTriplet | undefined = undefined;
 
-    if (state.mutes[binding.dial]) {
-      state.mutes[binding.dial] = false;
-      controlVal = state.dials[binding.dial] ?? 0;
+    if (context.mutes[binding.dial]) {
+      context.mutes[binding.dial] = false;
+      controlVal = context.dials[binding.dial] ?? 0;
       ledBytes =
         button &&
-        buttonLEDBytes(button, "GREEN", button.channel, button.note, state);
+        buttonLEDBytes(button, "GREEN", button.channel, button.note, context);
     } else {
-      state.mutes[binding.dial] = true;
+      context.mutes[binding.dial] = true;
       controlVal = 0;
       ledBytes =
         button &&
-        buttonLEDBytes(button, "RED", button.channel, button.note, state);
+        buttonLEDBytes(button, "RED", button.channel, button.note, context);
     }
 
-    manifestDialValue(binding.dial, controlVal, config, state, midishIn);
+    manifestDialValue(binding.dial, controlVal, config, context);
     return amidiSend(config.outputMidi, [ledBytes]).catch(handleAmidiError);
   }
 
   if (binding.type == "mixer::select") {
     let resetLED = () => {};
     if (button !== undefined) {
-      const initialButtonColor = state.buttonColors[button.label];
+      const initialButtonColor = context.buttonColors[button.label];
 
       const data = buttonLEDBytes(
         button,
         binding.pendingColor,
         button.channel,
         button.note,
-        state
+        context
       );
       amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
 
@@ -149,52 +153,53 @@ async function doActionBinding(
             initialButtonColor,
             button.channel,
             button.note,
-            state
+            context
           );
           amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
         }
       };
     }
 
-    const mixerChannels = mixerPorts(state.pipewire.state);
+    const mixerChannels = mixerPorts(context.pipewire.state);
     if (mixerChannels === undefined) {
       return;
     }
 
     const sources: Record<string, NodeWithPorts> = Object.fromEntries(
-      audioClients(state.pipewire.state).map((item) => [
+      audioClients(context.pipewire.state).map((item) => [
         item.node.info?.props?.["application.name"],
         item,
       ])
     );
 
-    state.rofiOpen = true;
+    context.rofiOpen = true;
     const sourcesString = Object.keys(sources).join("\n");
     const cmd = `echo "${sourcesString}" | rofi -dmenu -i -p "select source:" -theme links`;
     return run(cmd)
       .then(([stdout]) => {
         const source = sources[stdout.trim()];
         const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
-        connectAppToMixer(source, channel, state.pipewire.state).then(() =>
+        connectAppToMixer(source, channel, context.pipewire.state).then(() =>
           resetLED()
         );
       })
       .catch((_) => resetLED())
-      .finally(() => (state.rofiOpen = false));
+      .finally(() => (context.rofiOpen = false));
   }
 
   if (binding.type === "range") {
-    if (state.ranges[binding.dial] === undefined) {
+    if (context.ranges[binding.dial] === undefined) {
       const initialMode = binding.modes[0];
-      state.ranges[binding.dial] = {
+      context.ranges[binding.dial] = {
         range: initialMode.range,
         idx: 0,
       };
     }
 
-    const newIdx = (state.ranges[binding.dial].idx + 1) % binding.modes.length;
+    const newIdx =
+      (context.ranges[binding.dial].idx + 1) % binding.modes.length;
     const newMode = binding.modes[newIdx];
-    state.ranges[binding.dial] = {
+    context.ranges[binding.dial] = {
       range: newMode.range,
       idx: newIdx,
     };
@@ -203,15 +208,20 @@ async function doActionBinding(
     // in volume the next time the dial is moved
     manifestDialValue(
       binding.dial,
-      state.dials[binding.dial] ?? 0,
+      context.dials[binding.dial] ?? 0,
       config,
-      state,
-      midishIn
+      context
     );
 
     const data =
       button &&
-      buttonLEDBytes(button, newMode.color, button.channel, button.note, state);
+      buttonLEDBytes(
+        button,
+        newMode.color,
+        button.channel,
+        button.note,
+        context
+      );
 
     return amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
   }
@@ -220,8 +230,7 @@ async function doActionBinding(
 async function handleNoteOn(
   event: MidiEventNoteOn,
   config: RuntimeConfig,
-  midishIn: Readable,
-  state: WatchMidiState
+  context: WatchMidiContext
 ): Promise<void> {
   if (event.channel === config.device.keys.channel) {
     debug(`Key ON ${event.note} velocity ${event.velocity}`);
@@ -238,7 +247,7 @@ async function handleNoteOn(
 
   if (button.label === "Shift") {
     debug("Shift ON");
-    state.shiftPressed = true;
+    context.shiftPressed = true;
     return;
   }
 
@@ -248,17 +257,23 @@ async function handleNoteOn(
     return;
   }
 
-  if (state.shiftPressed) {
+  if (context.shiftPressed) {
     if (binding.onShiftLongPress !== undefined) {
       const lp = binding.onShiftLongPress;
-      state.buttonTimeouts[button.label] = setTimeout(() => {
+      context.buttonTimeouts[button.label] = setTimeout(() => {
         amidiSend(config.outputMidi, [
-          buttonLEDBytes(button, lp.color, button.channel, button.note, state),
+          buttonLEDBytes(
+            button,
+            lp.color,
+            button.channel,
+            button.note,
+            context
+          ),
         ]);
 
         Promise.all(
           lp.actions.map((bind) =>
-            handleButtonBinding(bind, button, event, state, config, midishIn)
+            handleButtonBinding(bind, button, event, context, config)
           )
         ).then(() => Promise.resolve());
       }, lp.timeout);
@@ -271,13 +286,13 @@ async function handleNoteOn(
           binding.onShiftPress.color,
           button.channel,
           button.note,
-          state
+          context
         ),
       ]);
 
       return Promise.all(
         binding.onShiftPress.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, state, config, midishIn)
+          handleButtonBinding(bind, button, event, context, config)
         )
       ).then(() => Promise.resolve());
     }
@@ -287,14 +302,14 @@ async function handleNoteOn(
 
   if (binding.onLongPress !== undefined) {
     const lp = binding.onLongPress;
-    state.buttonTimeouts[button.label] = setTimeout(() => {
+    context.buttonTimeouts[button.label] = setTimeout(() => {
       amidiSend(config.outputMidi, [
-        buttonLEDBytes(button, lp.color, button.channel, button.note, state),
+        buttonLEDBytes(button, lp.color, button.channel, button.note, context),
       ]);
 
       Promise.all(
         lp.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, state, config, midishIn)
+          handleButtonBinding(bind, button, event, context, config)
         )
       ).then(() => Promise.resolve());
     }, lp.timeout);
@@ -307,13 +322,13 @@ async function handleNoteOn(
         binding.onPress.color,
         button.channel,
         button.note,
-        state
+        context
       ),
     ]);
 
     return Promise.all(
       binding.onPress.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, state, config, midishIn)
+        handleButtonBinding(bind, button, event, context, config)
       )
     ).then(() => Promise.resolve());
   }
@@ -323,21 +338,20 @@ async function handleButtonBinding(
   binding: ButtonBindAction,
   button: Button,
   event: MidiEventNoteOn | MidiEventNoteOff,
-  state: WatchMidiState,
-  config: RuntimeConfig,
-  midishIn: Readable
+  context: WatchMidiContext,
+  config: RuntimeConfig
 ) {
   if (binding.type === "cancel") {
-    if (state.rofiOpen) {
+    if (context.rofiOpen) {
       run("xdotool key Escape").catch((err) => error(err));
     } else if (binding.alt !== undefined) {
-      return doActionBinding(binding.alt, config, midishIn, state, button);
+      return doActionBinding(binding.alt, config, context, button);
     }
     return;
   }
 
   if (binding.type === "command") {
-    if (state.buttons[button.label] === undefined) {
+    if (context.buttons[button.label] === undefined) {
       const runningState = Object.entries(button.ledStates ?? {}).find(
         // TODO: stop hard coding this
         ([state]) => state === "AMBER"
@@ -348,79 +362,76 @@ async function handleButtonBinding(
         (runningState ?? ["OFF"])[0],
         event.channel,
         event.note,
-        state
+        context
       );
 
       amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
     }
 
     const timestamp = new Date().valueOf();
-    state.buttons[button.label] = timestamp;
+    context.buttons[button.label] = timestamp;
 
-    return doActionBinding(binding, config, midishIn, state, button).then(
-      () => {
-        if (state.buttons[button.label] !== timestamp) {
-          return;
-        }
-
-        delete state.buttons[button.label];
-
-        setTimeout(
-          () => {
-            const onState = Object.entries(button.ledStates ?? {}).find(
-              ([state]) => state === "ON" || state === "GREEN"
-            );
-
-            if (onState !== undefined) {
-              const data = buttonLEDBytes(
-                button,
-                onState[0],
-                event.channel,
-                event.note,
-                state
-              );
-              amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
-            }
-          },
-          new Date().valueOf() - timestamp < 150 ? 150 : 0
-        );
+    return doActionBinding(binding, config, context, button).then(() => {
+      if (context.buttons[button.label] !== timestamp) {
+        return;
       }
-    );
+
+      delete context.buttons[button.label];
+
+      setTimeout(
+        () => {
+          const onState = Object.entries(button.ledStates ?? {}).find(
+            ([state]) => state === "ON" || state === "GREEN"
+          );
+
+          if (onState !== undefined) {
+            const data = buttonLEDBytes(
+              button,
+              onState[0],
+              event.channel,
+              event.note,
+              context
+            );
+            amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+          }
+        },
+        new Date().valueOf() - timestamp < 150 ? 150 : 0
+      );
+    });
   }
 
   if (binding.type === "cycle") {
-    if (state.buttons[button.label] === undefined) {
-      state.buttons[button.label] = 1;
+    if (context.buttons[button.label] === undefined) {
+      context.buttons[button.label] = 1;
     } else {
-      state.buttons[button.label] =
-        (state.buttons[button.label] + 1) % binding.items.length;
+      context.buttons[button.label] =
+        (context.buttons[button.label] + 1) % binding.items.length;
     }
 
-    const newBind = binding.items[state.buttons[button.label]];
+    const newBind = binding.items[context.buttons[button.label]];
     const data = buttonLEDBytes(
       button,
       newBind.color,
       event.channel,
       event.note,
-      state
+      context
     );
 
     amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
     return Promise.all(
       newBind.actions.map((bind) => {
-        return doActionBinding(bind, config, midishIn, state, button);
+        return doActionBinding(bind, config, context, button);
       })
     ).then(() => Promise.resolve());
   }
 
-  return doActionBinding(binding, config, midishIn, state, button);
+  return doActionBinding(binding, config, context, button);
 }
 
 function handleNoteOff(
   event: MidiEventNoteOff,
   config: RuntimeConfig,
-  midishIn: Readable,
-  state: WatchMidiState
+  context: WatchMidiContext
 ) {
   if (event.channel === config.device.keys.channel) {
     debug(`Key OFF ${event.note} velocity ${event.velocity}`);
@@ -434,7 +445,7 @@ function handleNoteOff(
 
   if (button.label === "Shift") {
     debug("Shift OFF");
-    state.shiftPressed = false;
+    context.shiftPressed = false;
     return;
   }
 
@@ -443,9 +454,9 @@ function handleNoteOff(
     return;
   }
 
-  if (state.buttonTimeouts[button.label] !== undefined) {
-    clearTimeout(state.buttonTimeouts[button.label]);
-    delete state.buttonTimeouts[button.label];
+  if (context.buttonTimeouts[button.label] !== undefined) {
+    clearTimeout(context.buttonTimeouts[button.label]);
+    delete context.buttonTimeouts[button.label];
   }
 
   if (binding.onRelease !== undefined) {
@@ -455,13 +466,13 @@ function handleNoteOff(
         binding.onRelease.color,
         button.channel,
         button.note,
-        state
+        context
       ),
     ]);
 
     return Promise.all(
       binding.onRelease.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, state, config, midishIn)
+        handleButtonBinding(bind, button, event, context, config)
       )
     ).then(() => Promise.resolve());
   }
@@ -470,20 +481,19 @@ function handleNoteOff(
 function handleControlChange(
   event: MidiEventControlChange,
   config: RuntimeConfig,
-  midishIn: Readable,
-  state: WatchMidiState
+  context: WatchMidiContext
 ) {
   // shift key disables dials. useful for changing
   // dial ranges without having skips in output
-  if (state.shiftPressed) {
+  if (context.shiftPressed) {
     return;
   }
 
   const dial = config.device.dials.find(findDial(event)!);
   if (dial !== undefined) {
     debug(`[dial] `, dial.label, event.value);
-    manifestDialValue(dial.label, event.value, config, state, midishIn);
-    state.dials[dial.label] = event.value;
+    manifestDialValue(dial.label, event.value, config, context);
+    context.dials[dial.label] = event.value;
   }
 }
 
@@ -513,9 +523,10 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   }
 
   const config: RuntimeConfig = { ...rawConfig, device };
-  const state: WatchMidiState = {
+  const context: WatchMidiContext = {
     shiftPressed: false,
     rofiOpen: false,
+    midishIn,
     buttons: {},
     buttonColors: {},
     buttonTimeouts: {},
@@ -541,45 +552,45 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   // set up LED states on initialization
   amidiSend(
     config.outputMidi,
-    defaultLEDStates(config.bindings, device, state)
+    defaultLEDStates(config.bindings, device, context)
   );
 
   pipewire.on("data", (data) => {
-    updateDump(data.toString(), state.pipewire.state);
+    updateDump(data.toString(), context.pipewire.state);
 
-    if (state.pipewire.timeout !== undefined) {
-      state.pipewire.timeout.refresh();
+    if (context.pipewire.timeout !== undefined) {
+      context.pipewire.timeout.refresh();
       return;
     }
 
-    state.pipewire.timeout = setTimeout(() => {
-      const pwItems = Object.values(state.pipewire.state.items);
+    context.pipewire.timeout = setTimeout(() => {
+      const pwItems = Object.values(context.pipewire.state.items);
       config.pipewire.rules.onConnect.forEach((rule) => {
-        if (state.pipewire.prevDevices[rule.node] === true) return;
+        if (context.pipewire.prevDevices[rule.node] === true) return;
 
         const hasDevice = pwItems.some(findPwNode(rule.node));
 
         if (hasDevice) {
           rule.do.forEach((binding) => {
-            doActionBinding(binding, config, midishIn, state);
+            doActionBinding(binding, config, context);
           });
         }
       });
 
       config.pipewire.rules.onDisconnect.forEach((rule) => {
-        if (state.pipewire.prevDevices[rule.node] === false) return;
+        if (context.pipewire.prevDevices[rule.node] === false) return;
 
         const hasDevice = pwItems.some(findPwNode(rule.node));
 
         if (!hasDevice) {
           rule.do.forEach((binding) => {
-            doActionBinding(binding, config, midishIn, state);
+            doActionBinding(binding, config, context);
           });
         }
       });
 
-      Object.keys(state.pipewire.prevDevices).forEach((device) => {
-        state.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));
+      Object.keys(context.pipewire.prevDevices).forEach((device) => {
+        context.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));
       });
     }, UPDATE_HOOK_TIMEOUT_MS);
   });
@@ -590,13 +601,13 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
     switch (event.type) {
       case MidiEventType.NoteOn:
-        handleNoteOn(event, config, midishIn, state);
+        handleNoteOn(event, config, context);
         break;
       case MidiEventType.NoteOff:
-        handleNoteOff(event, config, midishIn, state);
+        handleNoteOff(event, config, context);
         break;
       case MidiEventType.ControlChange:
-        handleControlChange(event, config, midishIn, state);
+        handleControlChange(event, config, context);
         break;
       default:
         log(event);

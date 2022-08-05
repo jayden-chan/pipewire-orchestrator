@@ -43,7 +43,8 @@ export function midish(): [Promise<void>, Readable] {
   });
 
   const prom = new Promise<void>((resolve, reject) => {
-    const cmd = spawn("midish");
+    const cmd = spawn("stdbuf", ["-i0", "-o0", "-e0", "midish"]);
+
     cmd.on("close", (code) => {
       log(`midish process exited with code ${code}`);
       if (code === 0) {

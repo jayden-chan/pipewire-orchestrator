@@ -21,6 +21,12 @@
                     "description": "Toggle mute for the given dial"
                 },
                 {
+                    "$ref": "#/definitions/EqShowGUIBinding"
+                },
+                {
+                    "$ref": "#/definitions/EqLoadPresetBinding"
+                },
+                {
                     "$ref": "#/definitions/MixerSelectBinding",
                     "description": "Open the selection prompt to assign an application\nto a mixer channel"
                 },
@@ -45,13 +51,19 @@
             "$ref": "#/definitions/__type_2"
         },
         "CancelBinding": {
-            "$ref": "#/definitions/__type_21"
+            "$ref": "#/definitions/__type_23"
         },
         "CommandBinding": {
             "$ref": "#/definitions/__type_4"
         },
         "CycleBinding": {
             "$ref": "#/definitions/__type_14"
+        },
+        "EqLoadPresetBinding": {
+            "$ref": "#/definitions/__type_17"
+        },
+        "EqShowGUIBinding": {
+            "$ref": "#/definitions/__type_16"
         },
         "KeyEventAction": {
             "$ref": "#/definitions/KeyEventAction_1",
@@ -65,7 +77,7 @@
             "description": "Action(s) to execute on long press"
         },
         "LongPressAction_1": {
-            "$ref": "#/definitions/__type_22"
+            "$ref": "#/definitions/__type_24"
         },
         "MapFunction": {
             "enum": [
@@ -143,22 +155,22 @@
             "type": "string"
         },
         "MixerSelectBinding": {
-            "$ref": "#/definitions/__type_16"
+            "$ref": "#/definitions/__type_18"
         },
         "NodeAndPort": {
-            "$ref": "#/definitions/__type_18"
+            "$ref": "#/definitions/__type_20"
         },
         "PassthroughBinding": {
             "$ref": "#/definitions/__type_1"
         },
         "PipewireExclusiveLinkBinding": {
-            "$ref": "#/definitions/__type_19"
+            "$ref": "#/definitions/__type_21"
         },
         "PipewireLinkBinding": {
-            "$ref": "#/definitions/__type_17"
+            "$ref": "#/definitions/__type_19"
         },
         "PipewireUnLinkBinding": {
-            "$ref": "#/definitions/__type_20"
+            "$ref": "#/definitions/__type_22"
         },
         "Range": {
             "items": [
@@ -336,6 +348,12 @@
                                             "description": "Toggle mute for the given dial"
                                         },
                                         {
+                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                        },
+                                        {
                                             "$ref": "#/definitions/MixerSelectBinding",
                                             "description": "Open the selection prompt to assign an application\nto a mixer channel"
                                         },
@@ -401,6 +419,40 @@
         },
         "__type_16": {
             "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "enum": [
+                        "eq::show_gui"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_17": {
+            "additionalProperties": false,
+            "properties": {
+                "preset": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "eq::load_preset"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "preset",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_18": {
+            "additionalProperties": false,
             "description": "Open the selection prompt to assign an application\nto a mixer channel",
             "properties": {
                 "channel": {
@@ -422,7 +474,7 @@
             ],
             "type": "object"
         },
-        "__type_17": {
+        "__type_19": {
             "additionalProperties": false,
             "description": "Create a link between two nodes and ports within PipeWire",
             "properties": {
@@ -435,46 +487,6 @@
                 "type": {
                     "enum": [
                         "pipewire::link"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "dest",
-                "src",
-                "type"
-            ],
-            "type": "object"
-        },
-        "__type_18": {
-            "additionalProperties": false,
-            "properties": {
-                "node": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "node",
-                "port"
-            ],
-            "type": "object"
-        },
-        "__type_19": {
-            "additionalProperties": false,
-            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
-            "properties": {
-                "dest": {
-                    "$ref": "#/definitions/NodeAndPort"
-                },
-                "src": {
-                    "$ref": "#/definitions/NodeAndPort"
-                },
-                "type": {
-                    "enum": [
-                        "pipewire::exclusive_link"
                     ],
                     "type": "string"
                 }
@@ -518,6 +530,46 @@
         },
         "__type_20": {
             "additionalProperties": false,
+            "properties": {
+                "node": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "node",
+                "port"
+            ],
+            "type": "object"
+        },
+        "__type_21": {
+            "additionalProperties": false,
+            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
+            "properties": {
+                "dest": {
+                    "$ref": "#/definitions/NodeAndPort"
+                },
+                "src": {
+                    "$ref": "#/definitions/NodeAndPort"
+                },
+                "type": {
+                    "enum": [
+                        "pipewire::exclusive_link"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "dest",
+                "src",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_22": {
+            "additionalProperties": false,
             "description": "Destroy a link between two nodes and ports within PipeWire",
             "properties": {
                 "dest": {
@@ -540,7 +592,7 @@
             ],
             "type": "object"
         },
-        "__type_21": {
+        "__type_23": {
             "additionalProperties": false,
             "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)",
             "properties": {
@@ -559,7 +611,7 @@
             ],
             "type": "object"
         },
-        "__type_22": {
+        "__type_24": {
             "additionalProperties": false,
             "description": "Action(s) to execute on long press",
             "properties": {
@@ -589,6 +641,12 @@
                             {
                                 "$ref": "#/definitions/ToggleMuteBinding",
                                 "description": "Toggle mute for the given dial"
+                            },
+                            {
+                                "$ref": "#/definitions/EqShowGUIBinding"
+                            },
+                            {
+                                "$ref": "#/definitions/EqLoadPresetBinding"
                             },
                             {
                                 "$ref": "#/definitions/MixerSelectBinding",
@@ -653,6 +711,12 @@
                             {
                                 "$ref": "#/definitions/ToggleMuteBinding",
                                 "description": "Toggle mute for the given dial"
+                            },
+                            {
+                                "$ref": "#/definitions/EqShowGUIBinding"
+                            },
+                            {
+                                "$ref": "#/definitions/EqLoadPresetBinding"
                             },
                             {
                                 "$ref": "#/definitions/MixerSelectBinding",
@@ -917,6 +981,12 @@
                                                     "description": "Toggle mute for the given dial"
                                                 },
                                                 {
+                                                    "$ref": "#/definitions/EqShowGUIBinding"
+                                                },
+                                                {
+                                                    "$ref": "#/definitions/EqLoadPresetBinding"
+                                                },
+                                                {
                                                     "$ref": "#/definitions/MixerSelectBinding",
                                                     "description": "Open the selection prompt to assign an application\nto a mixer channel"
                                                 },
@@ -970,6 +1040,12 @@
                                                 {
                                                     "$ref": "#/definitions/ToggleMuteBinding",
                                                     "description": "Toggle mute for the given dial"
+                                                },
+                                                {
+                                                    "$ref": "#/definitions/EqShowGUIBinding"
+                                                },
+                                                {
+                                                    "$ref": "#/definitions/EqLoadPresetBinding"
                                                 },
                                                 {
                                                     "$ref": "#/definitions/MixerSelectBinding",

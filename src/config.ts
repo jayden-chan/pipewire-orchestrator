@@ -77,6 +77,15 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
+export type EqShowGUIBinding = {
+  type: "eq::show_gui";
+};
+
+export type EqLoadPresetBinding = {
+  type: "eq::load_preset";
+  preset: string;
+};
+
 /**
  * Open the selection prompt to assign an application
  * to a mixer channel
@@ -118,6 +127,8 @@ export type PipewireUnLinkBinding = {
 };
 
 export type ActionBinding =
+  | EqShowGUIBinding
+  | EqLoadPresetBinding
   | CommandBinding
   | ToggleMuteBinding
   | MidiBinding

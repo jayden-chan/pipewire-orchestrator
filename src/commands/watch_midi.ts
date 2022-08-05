@@ -7,6 +7,7 @@ import {
 } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
+import { jalv } from "../eq";
 import { handleAmidiError, handlePwLinkError } from "../errors";
 import { debug, error, log } from "../logger";
 import {
@@ -42,25 +43,6 @@ import {
   run,
 } from "../util";
 
-type RangeStates = Record<string, { range: Range; idx: number }>;
-export type WatchMidiContext = {
-  config: RuntimeConfig;
-  midishIn: Readable;
-  shiftPressed: boolean;
-  rofiOpen: boolean;
-  ranges: RangeStates;
-  mutes: Record<string, boolean>;
-  dials: Record<string, number>;
-  buttons: Record<string, number>;
-  buttonColors: Record<string, string>;
-  buttonTimeouts: Record<string, NodeJS.Timeout>;
-  pipewire: {
-    state: PipewireDump;
-    timeout: NodeJS.Timeout | undefined;
-    prevDevices: Record<string, boolean>;
-  };
-};
-
 const UPDATE_HOOK_TIMEOUT_MS = 150;
 const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
@@ -89,6 +71,12 @@ async function doActionBinding(
         });
     case "midi":
       context.midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
+      return;
+    case "eq::load_preset":
+      context.jalvIn.push(`preset ${binding.preset}`);
+      return;
+    case "eq::show_gui":
+      context.jalvIn.push("show");
       return;
     case "pipewire::link":
       return ensureLink(
@@ -489,6 +477,26 @@ function handleControlChange(
   }
 }
 
+type RangeStates = Record<string, { range: Range; idx: number }>;
+export type WatchMidiContext = {
+  config: RuntimeConfig;
+  midishIn: Readable;
+  jalvIn: Readable;
+  shiftPressed: boolean;
+  rofiOpen: boolean;
+  ranges: RangeStates;
+  mutes: Record<string, boolean>;
+  dials: Record<string, number>;
+  buttons: Record<string, number>;
+  buttonColors: Record<string, string>;
+  buttonTimeouts: Record<string, NodeJS.Timeout>;
+  pipewire: {
+    state: PipewireDump;
+    timeout: NodeJS.Timeout | undefined;
+    prevDevices: Record<string, boolean>;
+  };
+};
+
 export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const rawConfig = await readConfig(configPath);
   log("Loaded config file");
@@ -507,6 +515,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const [watchMidiPromise, stream] = watchMidi(devicePort);
   const [pipewirePromise, pipewire] = watchPwDump();
   const [midishPromise, midishIn] = midish();
+  const [eqPromise, jalvIn] = jalv();
 
   const device = DEVICE_CONFS[dev];
   if (device === undefined) {
@@ -518,6 +527,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const context: WatchMidiContext = {
     config,
     midishIn,
+    jalvIn,
     shiftPressed: false,
     rofiOpen: false,
     buttons: {},
@@ -608,7 +618,12 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   });
 
   try {
-    await Promise.race([watchMidiPromise, pipewirePromise, midishPromise]);
+    await Promise.race([
+      watchMidiPromise,
+      pipewirePromise,
+      midishPromise,
+      eqPromise,
+    ]);
     return 0;
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);

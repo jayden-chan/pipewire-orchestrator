@@ -44,6 +44,7 @@ import {
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
 export type WatchMidiContext = {
+  config: RuntimeConfig;
   midishIn: Readable;
   shiftPressed: boolean;
   rofiOpen: boolean;
@@ -76,7 +77,6 @@ const findDial = (event: MidiEventControlChange) => {
 
 async function doActionBinding(
   binding: ActionBinding,
-  config: RuntimeConfig,
   context: WatchMidiContext,
   button?: Button
 ): Promise<void> {
@@ -128,8 +128,10 @@ async function doActionBinding(
         buttonLEDBytes(button, "RED", button.channel, button.note, context);
     }
 
-    manifestDialValue(binding.dial, controlVal, config, context);
-    return amidiSend(config.outputMidi, [ledBytes]).catch(handleAmidiError);
+    manifestDialValue(binding.dial, controlVal, context);
+    return amidiSend(context.config.outputMidi, [ledBytes]).catch(
+      handleAmidiError
+    );
   }
 
   if (binding.type == "mixer::select") {
@@ -144,7 +146,7 @@ async function doActionBinding(
         button.note,
         context
       );
-      amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+      amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
 
       resetLED = () => {
         if (button !== undefined) {
@@ -155,7 +157,7 @@ async function doActionBinding(
             button.note,
             context
           );
-          amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+          amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
         }
       };
     }
@@ -206,12 +208,7 @@ async function doActionBinding(
 
     // update the dial value immediately so we don't get a jump
     // in volume the next time the dial is moved
-    manifestDialValue(
-      binding.dial,
-      context.dials[binding.dial] ?? 0,
-      config,
-      context
-    );
+    manifestDialValue(binding.dial, context.dials[binding.dial] ?? 0, context);
 
     const data =
       button &&
@@ -223,21 +220,20 @@ async function doActionBinding(
         context
       );
 
-    return amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+    return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
   }
 }
 
 async function handleNoteOn(
   event: MidiEventNoteOn,
-  config: RuntimeConfig,
   context: WatchMidiContext
 ): Promise<void> {
-  if (event.channel === config.device.keys.channel) {
+  if (event.channel === context.config.device.keys.channel) {
     debug(`Key ON ${event.note} velocity ${event.velocity}`);
     return;
   }
 
-  const button = config.device.buttons.find(
+  const button = context.config.device.buttons.find(
     (b) => b.channel === event.channel && b.note === event.note
   );
 
@@ -252,7 +248,7 @@ async function handleNoteOn(
   }
 
   debug("[button pressed]", button.label);
-  const binding = config.bindings[button.label];
+  const binding = context.config.bindings[button.label];
   if (binding === undefined || binding.type !== "button") {
     return;
   }
@@ -261,7 +257,7 @@ async function handleNoteOn(
     if (binding.onShiftLongPress !== undefined) {
       const lp = binding.onShiftLongPress;
       context.buttonTimeouts[button.label] = setTimeout(() => {
-        amidiSend(config.outputMidi, [
+        amidiSend(context.config.outputMidi, [
           buttonLEDBytes(
             button,
             lp.color,
@@ -273,14 +269,14 @@ async function handleNoteOn(
 
         Promise.all(
           lp.actions.map((bind) =>
-            handleButtonBinding(bind, button, event, context, config)
+            handleButtonBinding(bind, button, event, context)
           )
         ).then(() => Promise.resolve());
       }, lp.timeout);
     }
 
     if (binding.onShiftPress !== undefined) {
-      amidiSend(config.outputMidi, [
+      amidiSend(context.config.outputMidi, [
         buttonLEDBytes(
           button,
           binding.onShiftPress.color,
@@ -292,7 +288,7 @@ async function handleNoteOn(
 
       return Promise.all(
         binding.onShiftPress.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, context, config)
+          handleButtonBinding(bind, button, event, context)
         )
       ).then(() => Promise.resolve());
     }
@@ -303,20 +299,20 @@ async function handleNoteOn(
   if (binding.onLongPress !== undefined) {
     const lp = binding.onLongPress;
     context.buttonTimeouts[button.label] = setTimeout(() => {
-      amidiSend(config.outputMidi, [
+      amidiSend(context.config.outputMidi, [
         buttonLEDBytes(button, lp.color, button.channel, button.note, context),
       ]);
 
       Promise.all(
         lp.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, context, config)
+          handleButtonBinding(bind, button, event, context)
         )
       ).then(() => Promise.resolve());
     }, lp.timeout);
   }
 
   if (binding.onPress !== undefined) {
-    amidiSend(config.outputMidi, [
+    amidiSend(context.config.outputMidi, [
       buttonLEDBytes(
         button,
         binding.onPress.color,
@@ -328,7 +324,7 @@ async function handleNoteOn(
 
     return Promise.all(
       binding.onPress.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, context, config)
+        handleButtonBinding(bind, button, event, context)
       )
     ).then(() => Promise.resolve());
   }
@@ -338,14 +334,13 @@ async function handleButtonBinding(
   binding: ButtonBindAction,
   button: Button,
   event: MidiEventNoteOn | MidiEventNoteOff,
-  context: WatchMidiContext,
-  config: RuntimeConfig
+  context: WatchMidiContext
 ) {
   if (binding.type === "cancel") {
     if (context.rofiOpen) {
       run("xdotool key Escape").catch((err) => error(err));
     } else if (binding.alt !== undefined) {
-      return doActionBinding(binding.alt, config, context, button);
+      return doActionBinding(binding.alt, context, button);
     }
     return;
   }
@@ -365,13 +360,13 @@ async function handleButtonBinding(
         context
       );
 
-      amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+      amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
     }
 
     const timestamp = new Date().valueOf();
     context.buttons[button.label] = timestamp;
 
-    return doActionBinding(binding, config, context, button).then(() => {
+    return doActionBinding(binding, context, button).then(() => {
       if (context.buttons[button.label] !== timestamp) {
         return;
       }
@@ -392,7 +387,9 @@ async function handleButtonBinding(
               event.note,
               context
             );
-            amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+            amidiSend(context.config.outputMidi, [data]).catch(
+              handleAmidiError
+            );
           }
         },
         new Date().valueOf() - timestamp < 150 ? 150 : 0
@@ -417,28 +414,24 @@ async function handleButtonBinding(
       context
     );
 
-    amidiSend(config.outputMidi, [data]).catch(handleAmidiError);
+    amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
     return Promise.all(
       newBind.actions.map((bind) => {
-        return doActionBinding(bind, config, context, button);
+        return doActionBinding(bind, context, button);
       })
     ).then(() => Promise.resolve());
   }
 
-  return doActionBinding(binding, config, context, button);
+  return doActionBinding(binding, context, button);
 }
 
-function handleNoteOff(
-  event: MidiEventNoteOff,
-  config: RuntimeConfig,
-  context: WatchMidiContext
-) {
-  if (event.channel === config.device.keys.channel) {
+function handleNoteOff(event: MidiEventNoteOff, context: WatchMidiContext) {
+  if (event.channel === context.config.device.keys.channel) {
     debug(`Key OFF ${event.note} velocity ${event.velocity}`);
     return;
   }
 
-  const button = config.device.buttons.find(findButton(event)!);
+  const button = context.config.device.buttons.find(findButton(event)!);
   if (button === undefined) {
     return;
   }
@@ -449,7 +442,7 @@ function handleNoteOff(
     return;
   }
 
-  const binding = config.bindings[button.label];
+  const binding = context.config.bindings[button.label];
   if (binding === undefined || binding.type !== "button") {
     return;
   }
@@ -460,7 +453,7 @@ function handleNoteOff(
   }
 
   if (binding.onRelease !== undefined) {
-    amidiSend(config.outputMidi, [
+    amidiSend(context.config.outputMidi, [
       buttonLEDBytes(
         button,
         binding.onRelease.color,
@@ -472,7 +465,7 @@ function handleNoteOff(
 
     return Promise.all(
       binding.onRelease.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, context, config)
+        handleButtonBinding(bind, button, event, context)
       )
     ).then(() => Promise.resolve());
   }
@@ -480,7 +473,6 @@ function handleNoteOff(
 
 function handleControlChange(
   event: MidiEventControlChange,
-  config: RuntimeConfig,
   context: WatchMidiContext
 ) {
   // shift key disables dials. useful for changing
@@ -489,10 +481,10 @@ function handleControlChange(
     return;
   }
 
-  const dial = config.device.dials.find(findDial(event)!);
+  const dial = context.config.device.dials.find(findDial(event)!);
   if (dial !== undefined) {
     debug(`[dial] `, dial.label, event.value);
-    manifestDialValue(dial.label, event.value, config, context);
+    manifestDialValue(dial.label, event.value, context);
     context.dials[dial.label] = event.value;
   }
 }
@@ -524,9 +516,10 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
   const config: RuntimeConfig = { ...rawConfig, device };
   const context: WatchMidiContext = {
+    config,
+    midishIn,
     shiftPressed: false,
     rofiOpen: false,
-    midishIn,
     buttons: {},
     buttonColors: {},
     buttonTimeouts: {},
@@ -552,7 +545,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   // set up LED states on initialization
   amidiSend(
     config.outputMidi,
-    defaultLEDStates(config.bindings, device, context)
+    defaultLEDStates(context.config.bindings, context)
   );
 
   pipewire.on("data", (data) => {
@@ -572,7 +565,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
         if (hasDevice) {
           rule.do.forEach((binding) => {
-            doActionBinding(binding, config, context);
+            doActionBinding(binding, context);
           });
         }
       });
@@ -584,7 +577,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
         if (!hasDevice) {
           rule.do.forEach((binding) => {
-            doActionBinding(binding, config, context);
+            doActionBinding(binding, context);
           });
         }
       });
@@ -601,13 +594,13 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
     switch (event.type) {
       case MidiEventType.NoteOn:
-        handleNoteOn(event, config, context);
+        handleNoteOn(event, context);
         break;
       case MidiEventType.NoteOff:
-        handleNoteOff(event, config, context);
+        handleNoteOff(event, context);
         break;
       case MidiEventType.ControlChange:
-        handleControlChange(event, config, context);
+        handleControlChange(event, context);
         break;
       default:
         log(event);

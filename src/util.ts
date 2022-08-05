@@ -1,7 +1,7 @@
 import { exec, ExecException } from "child_process";
 import { WatchMidiContext } from "./commands/watch_midi";
-import { Bindings, PassthroughBinding, RuntimeConfig } from "./config";
-import { Button, Device, Dial } from "./devices";
+import { Bindings, PassthroughBinding } from "./config";
+import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
@@ -36,12 +36,12 @@ const MAP_FUNCTIONS = {
 export function computeMappedVal(
   input: number,
   dial: Dial,
-  state: WatchMidiContext,
+  context: WatchMidiContext,
   binding: PassthroughBinding
 ): number {
   let pct = input / (dial.range[1] - dial.range[0]);
-  if (state.ranges[dial.label] !== undefined) {
-    const [start, end] = state.ranges[dial.label].range;
+  if (context.ranges[dial.label] !== undefined) {
+    const [start, end] = context.ranges[dial.label].range;
     pct = pct * (end - start) + start;
   }
 
@@ -52,14 +52,13 @@ export function computeMappedVal(
 export function manifestDialValue(
   dialName: string,
   value: number,
-  config: RuntimeConfig,
   context: WatchMidiContext
 ) {
-  const dialBinding = Object.entries(config.bindings).find(
+  const dialBinding = Object.entries(context.config.bindings).find(
     ([dial]) => dial === dialName
   );
 
-  const dial = config.device.dials.find((d) => d.label === dialName);
+  const dial = context.config.device.dials.find((d) => d.label === dialName);
 
   if (
     dial === undefined ||
@@ -149,7 +148,7 @@ export function buttonLEDBytes(
   color: string | undefined,
   channel: number,
   note: number,
-  state: WatchMidiContext
+  context: WatchMidiContext
 ): ByteTriplet | undefined {
   if (button.ledStates !== undefined && color !== undefined) {
     const ledState = Object.entries(button.ledStates).find(
@@ -161,7 +160,7 @@ export function buttonLEDBytes(
     if (ledState === undefined) {
       warn(`Button ${button.label} doesn't support requested color ${color}`);
     } else {
-      state.buttonColors[button.label] = color;
+      context.buttonColors[button.label] = color;
       return {
         b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
         b2: note,
@@ -173,11 +172,10 @@ export function buttonLEDBytes(
 
 export function defaultLEDStates(
   bindings: Bindings,
-  device: Device,
-  state: WatchMidiContext
+  context: WatchMidiContext
 ): ByteTriplet[] {
   return Object.entries(bindings).flatMap(([key, buttonBind]) => {
-    const button = device.buttons.find((b) => b.label === key);
+    const button = context.config.device.buttons.find((b) => b.label === key);
     if (button === undefined || buttonBind.type === "passthrough") {
       return [];
     }
@@ -206,7 +204,7 @@ export function defaultLEDStates(
       }
 
       commands.push(
-        buttonLEDBytes(button, color, button.channel, button.note, state)
+        buttonLEDBytes(button, color, button.channel, button.note, context)
       );
     });
 

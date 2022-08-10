@@ -1,3 +1,4 @@
+import { warn } from "console";
 import { Readable } from "stream";
 import {
   ActionBinding,
@@ -34,6 +35,7 @@ import {
   updateDump,
   watchPwDump,
 } from "../pipewire";
+import { PipewireItemType } from "../pipewire/types";
 import {
   buttonLEDBytes,
   connectMidiDevices,
@@ -169,8 +171,8 @@ async function doActionBinding(
       .then(([stdout]) => {
         const source = sources[stdout.trim()];
         const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
-        connectAppToMixer(source, channel, context.pipewire.state).then(() =>
-          resetLED()
+        connectAppToMixer(source, channel, context.pipewire.state, true).then(
+          () => resetLED()
         );
       })
       .catch((_) => resetLED())
@@ -524,6 +526,26 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   }
 
   const config: RuntimeConfig = { ...rawConfig, device };
+  const onConnectRules: Array<[string, ActionBinding[]]> = config.pipewire.rules
+    .filter((rule) => rule.onConnect !== undefined)
+    .map((rule) => [rule.node, rule.onConnect]) as [string, ActionBinding[]][];
+
+  const onDisconnectRules: Array<[string, ActionBinding[]]> =
+    config.pipewire.rules
+      .filter((rule) => rule.onDisconnect !== undefined)
+      .map((rule) => [rule.node, rule.onDisconnect]) as [
+      string,
+      ActionBinding[]
+    ][];
+
+  const mixerRules: Array<[string, number | "round_robin"]> =
+    config.pipewire.rules
+      .filter((rule) => rule.mixerChannel !== undefined)
+      .map((rule) => [rule.node, rule.mixerChannel]) as [
+      string,
+      number | "round_robin"
+    ][];
+
   const context: WatchMidiContext = {
     config,
     midishIn,
@@ -538,8 +560,8 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     pipewire: {
       timeout: undefined,
       prevDevices: Object.fromEntries([
-        ...config.pipewire.rules.onConnect.map((rule) => [rule.node, false]),
-        ...config.pipewire.rules.onDisconnect.map((rule) => [rule.node, true]),
+        ...onConnectRules.map(([node]) => [node, false]),
+        ...onDisconnectRules.map(([node]) => [node, true]),
       ]),
       state: {
         items: {},
@@ -568,28 +590,59 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
     context.pipewire.timeout = setTimeout(() => {
       const pwItems = Object.values(context.pipewire.state.items);
-      config.pipewire.rules.onConnect.forEach((rule) => {
-        if (context.pipewire.prevDevices[rule.node] === true) return;
+      const pwPorts = pwItems.filter(
+        (i) => i.type === PipewireItemType.PipeWireInterfacePort
+      );
+      onConnectRules
+        .filter(
+          ([node]) =>
+            context.pipewire.prevDevices[node] === false &&
+            pwItems.some(findPwNode(node))
+        )
+        .forEach(([, rule]) =>
+          rule.forEach((binding) => doActionBinding(binding, context))
+        );
 
-        const hasDevice = pwItems.some(findPwNode(rule.node));
+      onDisconnectRules
+        .filter(
+          ([node]) =>
+            context.pipewire.prevDevices[node] === true &&
+            !pwItems.some(findPwNode(node))
+        )
+        .forEach(([, rule]) =>
+          rule.forEach((binding) => doActionBinding(binding, context))
+        );
 
-        if (hasDevice) {
-          rule.do.forEach((binding) => {
-            doActionBinding(binding, context);
-          });
+      mixerRules.forEach(([nodeName, channel]) => {
+        const node = pwItems.find(findPwNode(nodeName));
+        if (node === undefined) {
+          return;
         }
-      });
 
-      config.pipewire.rules.onDisconnect.forEach((rule) => {
-        if (context.pipewire.prevDevices[rule.node] === false) return;
-
-        const hasDevice = pwItems.some(findPwNode(rule.node));
-
-        if (!hasDevice) {
-          rule.do.forEach((binding) => {
-            doActionBinding(binding, context);
-          });
+        if (channel === "round_robin") {
+          warn("[mixer] round robin mixer assignment isn't implemented yet!");
+          return;
         }
+
+        const mixerChannels = mixerPorts(context.pipewire.state);
+        if (mixerChannels === undefined) {
+          return;
+        }
+
+        const outputPorts = pwPorts.filter(
+          (p) =>
+            p.info?.props?.["node.id"] === node.id &&
+            p.info?.["direction"] === "output"
+        );
+
+        connectAppToMixer(
+          {
+            node,
+            ports: outputPorts,
+          },
+          mixerChannels[`Mixer Channel ${channel}`],
+          context.pipewire.state
+        ).catch((err) => error(`[mixer-auto-connect]`, err));
       });
 
       Object.keys(context.pipewire.prevDevices).forEach((device) => {

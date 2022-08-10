@@ -183,22 +183,25 @@ export type Bindings = {
   [key: Label]: Binding;
 };
 
+export type NodeEventConfig = {
+  node: string;
+  do: ActionBinding[];
+};
+
+export type PipeWireNodeConfig = {
+  node: string;
+  onConnect?: ActionBinding[];
+  onDisconnect?: ActionBinding[];
+  mixerChannel?: number | "round_robin";
+};
+
 export type Config = {
   connections: [string, string][];
   device: string;
   outputMidi: string;
   bindings: Bindings;
   pipewire: {
-    rules: {
-      onConnect: {
-        node: string;
-        do: ActionBinding[];
-      }[];
-      onDisconnect: {
-        node: string;
-        do: ActionBinding[];
-      }[];
-    };
+    rules: PipeWireNodeConfig[];
   };
 };
 

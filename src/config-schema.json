@@ -955,136 +955,122 @@
             "additionalProperties": false,
             "properties": {
                 "rules": {
-                    "additionalProperties": false,
-                    "properties": {
-                        "onConnect": {
-                            "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                    "do": {
-                                        "items": {
-                                            "anyOf": [
-                                                {
-                                                    "$ref": "#/definitions/CommandBinding",
-                                                    "description": "Execute a shell command when the binding is activated"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/RangeBinding",
-                                                    "description": "Change the range of a dial when the binding is executed"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/MidiBinding",
-                                                    "description": "Emit a MIDI event when the binding is activated"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/ToggleMuteBinding",
-                                                    "description": "Toggle mute for the given dial"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/EqShowGUIBinding"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/EqLoadPresetBinding"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/MixerSelectBinding",
-                                                    "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireLinkBinding",
-                                                    "description": "Create a link between two nodes and ports within PipeWire"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                                    "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireUnLinkBinding",
-                                                    "description": "Destroy a link between two nodes and ports within PipeWire"
-                                                }
-                                            ]
-                                        },
-                                        "type": "array"
-                                    },
-                                    "node": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "mixerChannel": {
+                                "anyOf": [
+                                    {
+                                        "enum": [
+                                            "round_robin"
+                                        ],
                                         "type": "string"
+                                    },
+                                    {
+                                        "type": "number"
                                     }
-                                },
-                                "required": [
-                                    "do",
-                                    "node"
-                                ],
-                                "type": "object"
+                                ]
                             },
-                            "type": "array"
+                            "node": {
+                                "type": "string"
+                            },
+                            "onConnect": {
+                                "items": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/definitions/CommandBinding",
+                                            "description": "Execute a shell command when the binding is activated"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/RangeBinding",
+                                            "description": "Change the range of a dial when the binding is executed"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/MidiBinding",
+                                            "description": "Emit a MIDI event when the binding is activated"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/ToggleMuteBinding",
+                                            "description": "Toggle mute for the given dial"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/MixerSelectBinding",
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireLinkBinding",
+                                            "description": "Create a link between two nodes and ports within PipeWire"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireUnLinkBinding",
+                                            "description": "Destroy a link between two nodes and ports within PipeWire"
+                                        }
+                                    ]
+                                },
+                                "type": "array"
+                            },
+                            "onDisconnect": {
+                                "items": {
+                                    "anyOf": [
+                                        {
+                                            "$ref": "#/definitions/CommandBinding",
+                                            "description": "Execute a shell command when the binding is activated"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/RangeBinding",
+                                            "description": "Change the range of a dial when the binding is executed"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/MidiBinding",
+                                            "description": "Emit a MIDI event when the binding is activated"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/ToggleMuteBinding",
+                                            "description": "Toggle mute for the given dial"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/MixerSelectBinding",
+                                            "description": "Open the selection prompt to assign an application\nto a mixer channel"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireLinkBinding",
+                                            "description": "Create a link between two nodes and ports within PipeWire"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
+                                        },
+                                        {
+                                            "$ref": "#/definitions/PipewireUnLinkBinding",
+                                            "description": "Destroy a link between two nodes and ports within PipeWire"
+                                        }
+                                    ]
+                                },
+                                "type": "array"
+                            }
                         },
-                        "onDisconnect": {
-                            "items": {
-                                "additionalProperties": false,
-                                "properties": {
-                                    "do": {
-                                        "items": {
-                                            "anyOf": [
-                                                {
-                                                    "$ref": "#/definitions/CommandBinding",
-                                                    "description": "Execute a shell command when the binding is activated"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/RangeBinding",
-                                                    "description": "Change the range of a dial when the binding is executed"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/MidiBinding",
-                                                    "description": "Emit a MIDI event when the binding is activated"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/ToggleMuteBinding",
-                                                    "description": "Toggle mute for the given dial"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/EqShowGUIBinding"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/EqLoadPresetBinding"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/MixerSelectBinding",
-                                                    "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireLinkBinding",
-                                                    "description": "Create a link between two nodes and ports within PipeWire"
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                                    "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                                                },
-                                                {
-                                                    "$ref": "#/definitions/PipewireUnLinkBinding",
-                                                    "description": "Destroy a link between two nodes and ports within PipeWire"
-                                                }
-                                            ]
-                                        },
-                                        "type": "array"
-                                    },
-                                    "node": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "do",
-                                    "node"
-                                ],
-                                "type": "object"
-                            },
-                            "type": "array"
-                        }
+                        "required": [
+                            "node"
+                        ],
+                        "type": "object"
                     },
-                    "required": [
-                        "onConnect",
-                        "onDisconnect"
-                    ],
-                    "type": "object"
+                    "type": "array"
                 }
             },
             "required": [

@@ -11,17 +11,33 @@ export const findPwNode = (searchTerm: string) => {
       return false;
     }
 
-    const desc = item.info?.props?.["node.description"];
-    const name = item.info?.props?.["node.name"];
+    const desc = item.info?.props?.["node.description"] ?? "";
+    const name = item.info?.props?.["node.name"] ?? "";
+
+    if (searchTerm.startsWith("re:")) {
+      const regex = new RegExp(searchTerm.slice(3));
+      return regex.test(desc) || regex.test(name);
+    }
+
     return desc === searchTerm || name === searchTerm;
   };
 };
 
 export type Links = {
   [key: string]: {
+    /**
+     * this node
+     */
     item: PipewireItem;
+
+    /**
+     * this port
+     */
     port: PipewireItem;
-    // [node, port]
+
+    /**
+     * [destNode, destPort][]
+     */
     links: [PipewireItem, PipewireItem][];
   };
 };
@@ -129,7 +145,8 @@ export function mixerPorts(
 export async function connectAppToMixer(
   app: NodeWithPorts,
   channel: NodeWithPorts,
-  dump: PipewireDump
+  dump: PipewireDump,
+  exclusive?: boolean
 ) {
   const sourceNodeId = app.node.id;
 
@@ -140,13 +157,20 @@ export async function connectAppToMixer(
         ? channel.ports[0]
         : channel.ports[1];
 
-    const command = `pw-link "${sourcePortId}" "${destPort.id}"`;
-    log(`[command] ${command}`);
-    const proms = [run(command).catch(handlePwLinkError)];
-
     const key = `${sourceNodeId}:${sourcePortId}`;
     const srcLinks = dump.links.forward[key];
-    if (srcLinks !== undefined) {
+
+    const proms = [];
+    if (
+      srcLinks === undefined ||
+      !srcLinks.links.some(([, dPort]) => dPort.id === destPort.id)
+    ) {
+      const command = `pw-link "${sourcePortId}" "${destPort.id}"`;
+      log(`[command] ${command}`);
+      proms.push(run(command).catch(handlePwLinkError));
+    }
+
+    if (exclusive && srcLinks !== undefined) {
       // remove any links that aren't the exclusive one specified
       srcLinks.links.forEach(([, dPort]) => {
         if (dPort.id !== destPort.id) {
@@ -321,7 +345,9 @@ export function watchPwDump(): [Promise<void>, Readable] {
       // to parse and emit to the output stream. I think there's a way of disabling
       // the buffering but this solution seems to work fine
       while (openBracketIndex !== -1 && closingBracketIndex !== -1) {
-        const data = stdoutBuf.slice(openBracketIndex, closingBracketIndex + 2);
+        const data = stdoutBuf
+          .slice(openBracketIndex, closingBracketIndex + 2)
+          .replace(/\r?\n/g, "");
 
         try {
           JSON.parse(data);
@@ -329,8 +355,19 @@ export function watchPwDump(): [Promise<void>, Readable] {
         } catch (e) {
           error("FAILED TO PARSE JSON");
           error(e);
-          error("DATA");
-          error(data);
+
+          if (e instanceof Error) {
+            const [match, position] =
+              e.message.match(/at position (\d+)/) ?? [];
+            if (match !== undefined) {
+              const pos = Number(position);
+              const dataSlice = data
+                .slice(pos - 100, pos + 100)
+                .replace(/\r?\n/g, "<CR>");
+              error(`[[[${dataSlice}]]]`);
+            }
+          }
+
           break;
         }
 

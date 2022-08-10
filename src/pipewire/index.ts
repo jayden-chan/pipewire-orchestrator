@@ -92,20 +92,28 @@ export function audioClients(dump: PipewireDump): NodeWithPorts[] {
     .filter((i) => i !== undefined) as NodeWithPorts[];
 }
 
-export function mixerPorts(
-  dump: PipewireDump
-): Record<string, NodeWithPorts> | undefined {
+export function findMixer(dump: PipewireDump): PipewireItem | undefined {
   const pwVals = Object.values(dump.items);
-  const pwPorts = pwVals.filter(
-    (i) => i.type === PipewireItemType.PipeWireInterfacePort
-  );
-
   const mixer = pwVals.find(
     (e) => e.info?.props?.["node.description"] === "Mixer"
   );
 
   if (mixer === undefined) {
-    error("[mixerPorts] could not find mixer node");
+    error("[findMixer] could not find mixer node");
+  }
+
+  return mixer;
+}
+
+export type MixerChannels = Record<string, NodeWithPorts>;
+export function mixerPorts(dump: PipewireDump): MixerChannels | undefined {
+  const pwVals = Object.values(dump.items);
+  const pwPorts = pwVals.filter(
+    (i) => i.type === PipewireItemType.PipeWireInterfacePort
+  );
+
+  const mixer = findMixer(dump);
+  if (mixer === undefined) {
     return;
   }
 
@@ -146,7 +154,7 @@ export async function connectAppToMixer(
   app: NodeWithPorts,
   channel: NodeWithPorts,
   dump: PipewireDump,
-  exclusive?: boolean
+  mode?: "exclusive" | "simple" | "smart"
 ) {
   const sourceNodeId = app.node.id;
 
@@ -170,10 +178,19 @@ export async function connectAppToMixer(
       proms.push(run(command).catch(handlePwLinkError));
     }
 
-    if (exclusive && srcLinks !== undefined) {
+    if (mode === "exclusive" && srcLinks !== undefined) {
       // remove any links that aren't the exclusive one specified
       srcLinks.links.forEach(([, dPort]) => {
         if (dPort.id !== destPort.id) {
+          const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
+          log(`[command] ${command}`);
+          proms.push(run(command).catch(handlePwLinkError));
+        }
+      });
+    } else if (mode === "smart" && srcLinks !== undefined) {
+      // unlink the app from the main audio output but not anything else
+      srcLinks.links.forEach(([dNode, dPort]) => {
+        if (dNode.info?.props?.["node.description"] === "Audio Output") {
           const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
           log(`[command] ${command}`);
           proms.push(run(command).catch(handlePwLinkError));

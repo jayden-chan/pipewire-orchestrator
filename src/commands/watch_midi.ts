@@ -1,4 +1,3 @@
-import { warn } from "console";
 import { Readable } from "stream";
 import {
   ActionBinding,
@@ -41,6 +40,8 @@ import {
   connectMidiDevices,
   defaultLEDStates,
   findDevicePort,
+  freeMixerPorts,
+  isAssignedToMixer,
   manifestDialValue,
   run,
 } from "../util";
@@ -171,9 +172,12 @@ async function doActionBinding(
       .then(([stdout]) => {
         const source = sources[stdout.trim()];
         const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
-        connectAppToMixer(source, channel, context.pipewire.state, true).then(
-          () => resetLED()
-        );
+        connectAppToMixer(
+          source,
+          channel,
+          context.pipewire.state,
+          "smart"
+        ).then(() => resetLED());
       })
       .catch((_) => resetLED())
       .finally(() => (context.rofiOpen = false));
@@ -479,6 +483,56 @@ function handleControlChange(
   }
 }
 
+function handleMixerRule(
+  nodeName: string,
+  channel: number | "round_robin",
+  context: WatchMidiContext
+) {
+  const pwItems = Object.values(context.pipewire.state.items);
+  const pwPorts = pwItems.filter(
+    (i) => i.type === PipewireItemType.PipeWireInterfacePort
+  );
+  const node = pwItems.find(findPwNode(nodeName));
+  const dump = context.pipewire.state;
+  const mixerChannels = mixerPorts(dump);
+  if (mixerChannels === undefined || node === undefined) {
+    return;
+  }
+
+  if (isAssignedToMixer(nodeName, mixerChannels, dump)) {
+    return;
+  }
+
+  let chan: string | undefined = undefined;
+  if (typeof channel === "number") {
+    chan = `Mixer Channel ${channel}`;
+  } else {
+    const occupiedPorts = freeMixerPorts(mixerChannels, dump);
+    if (occupiedPorts === undefined) {
+      return;
+    }
+
+    const freeChannel = Object.entries(occupiedPorts).find(([, free]) => free);
+    chan = freeChannel?.[0];
+  }
+
+  if (chan !== undefined) {
+    debug(`[mixer-assign] connecting ${nodeName} to ${chan}`);
+    const ports = pwPorts.filter(
+      (p) =>
+        p.info?.props?.["node.id"] === node.id &&
+        p.info?.["direction"] === "output"
+    );
+
+    connectAppToMixer(
+      { node, ports },
+      mixerChannels[chan],
+      dump,
+      "smart"
+    ).catch((err) => error(`[mixer-auto-connect]`, err));
+  }
+}
+
 type RangeStates = Record<string, { range: Range; idx: number }>;
 export type WatchMidiContext = {
   config: RuntimeConfig;
@@ -590,9 +644,6 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
 
     context.pipewire.timeout = setTimeout(() => {
       const pwItems = Object.values(context.pipewire.state.items);
-      const pwPorts = pwItems.filter(
-        (i) => i.type === PipewireItemType.PipeWireInterfacePort
-      );
       onConnectRules
         .filter(
           ([node]) =>
@@ -613,37 +664,9 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
           rule.forEach((binding) => doActionBinding(binding, context))
         );
 
-      mixerRules.forEach(([nodeName, channel]) => {
-        const node = pwItems.find(findPwNode(nodeName));
-        if (node === undefined) {
-          return;
-        }
-
-        if (channel === "round_robin") {
-          warn("[mixer] round robin mixer assignment isn't implemented yet!");
-          return;
-        }
-
-        const mixerChannels = mixerPorts(context.pipewire.state);
-        if (mixerChannels === undefined) {
-          return;
-        }
-
-        const outputPorts = pwPorts.filter(
-          (p) =>
-            p.info?.props?.["node.id"] === node.id &&
-            p.info?.["direction"] === "output"
-        );
-
-        connectAppToMixer(
-          {
-            node,
-            ports: outputPorts,
-          },
-          mixerChannels[`Mixer Channel ${channel}`],
-          context.pipewire.state
-        ).catch((err) => error(`[mixer-auto-connect]`, err));
-      });
+      mixerRules.forEach(([nodeName, channel]) =>
+        handleMixerRule(nodeName, channel, context)
+      );
 
       Object.keys(context.pipewire.prevDevices).forEach((device) => {
         context.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));

@@ -1,10 +1,12 @@
 import { exec, ExecException } from "child_process";
+import { log } from "console";
 import { WatchMidiContext } from "./commands/watch_midi";
 import { Bindings, PassthroughBinding } from "./config";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
+import { findMixer, findPwNode, MixerChannels, PipewireDump } from "./pipewire";
 
 const PORT_RE = /client (\d+): '(.*?)'/;
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
@@ -141,6 +143,48 @@ export async function connectMidiDevices(
       throw e;
     }
   }
+}
+
+export function isAssignedToMixer(
+  nodeName: string,
+  mixerChannels: MixerChannels,
+  dump: PipewireDump
+): boolean {
+  const mixer = findMixer(dump);
+  if (mixer === undefined) {
+    return false;
+  }
+
+  return Object.values(mixerChannels).some((nodes) => {
+    return nodes.ports.some((port) => {
+      const revLinks = dump.links.reverse[`${mixer.id}:${port.id}`];
+      return (
+        revLinks !== undefined &&
+        revLinks.links.some((link) => findPwNode(nodeName)(link[0]))
+      );
+    });
+  });
+}
+
+export function freeMixerPorts(
+  mixerChannels: MixerChannels,
+  dump: PipewireDump
+): Record<string, boolean> | undefined {
+  const mixer = findMixer(dump);
+  if (mixer === undefined) {
+    return;
+  }
+
+  return Object.fromEntries(
+    Object.entries(mixerChannels).map(([channel, nodeWithPorts]) => {
+      const isFreePort = nodeWithPorts.ports.every((port) => {
+        const revLinks = dump.links.reverse[`${mixer.id}:${port.id}`];
+        return revLinks === undefined || revLinks.links.length === 0;
+      });
+
+      return [channel, isFreePort];
+    })
+  );
 }
 
 export function buttonLEDBytes(

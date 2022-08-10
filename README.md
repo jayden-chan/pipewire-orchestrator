@@ -35,7 +35,7 @@ aconnect <virtual device id> <hardware device id>
 - [x] Request parameter dump from midi device on startup (not supported on current
       hardware)
 - [x] Better error handling besides "it's wrong"
-- [ ] Round robin mixer channel assignment
+- [x] Round robin mixer channel assignment
 
 ## Dev
 

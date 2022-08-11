@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { handlePwLinkError } from "../errors";
-import { debug, error, log, warn } from "../logger";
+import { error, log, warn } from "../logger";
 import { run } from "../util";
 import { Convert, PipewireItem, PipewireItemType } from "./types";
 

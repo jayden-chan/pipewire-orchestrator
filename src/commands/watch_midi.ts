@@ -34,7 +34,6 @@ import {
   updateDump,
   watchPwDump,
 } from "../pipewire";
-import { PipewireItemType } from "../pipewire/types";
 import {
   buttonLEDBytes,
   connectMidiDevices,
@@ -488,14 +487,12 @@ function handleMixerRule(
   channel: number | "round_robin",
   context: WatchMidiContext
 ) {
-  const pwItems = Object.values(context.pipewire.state.items);
-  const pwPorts = pwItems.filter(
-    (i) => i.type === PipewireItemType.PipeWireInterfacePort
+  const nodeWithPort = audioClients(context.pipewire.state).find((source) =>
+    findPwNode(nodeName)(source.node)
   );
-  const node = pwItems.find(findPwNode(nodeName));
   const dump = context.pipewire.state;
   const mixerChannels = mixerPorts(dump);
-  if (mixerChannels === undefined || node === undefined) {
+  if (mixerChannels === undefined || nodeWithPort === undefined) {
     return;
   }
 
@@ -518,18 +515,9 @@ function handleMixerRule(
 
   if (chan !== undefined) {
     debug(`[mixer-assign] connecting ${nodeName} to ${chan}`);
-    const ports = pwPorts.filter(
-      (p) =>
-        p.info?.props?.["node.id"] === node.id &&
-        p.info?.["direction"] === "output"
+    connectAppToMixer(nodeWithPort, mixerChannels[chan], dump, "smart").catch(
+      (err) => error(`[mixer-auto-connect]`, err)
     );
-
-    connectAppToMixer(
-      { node, ports },
-      mixerChannels[chan],
-      dump,
-      "smart"
-    ).catch((err) => error(`[mixer-auto-connect]`, err));
   }
 }
 

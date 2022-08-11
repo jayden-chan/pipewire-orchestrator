@@ -539,13 +539,7 @@ export interface InfoProps {
   "application.icon-name"?: Application;
 }
 
-export enum ALSACardName {
-  HDANVidia = "HDA NVidia",
-  HDAudioGeneric = "HD-Audio Generic",
-  NexiGoN930AFFHDWebcam = "NexiGo N930AF FHD Webcam",
-  ScarlettSoloUSB = "Scarlett Solo USB",
-}
-
+export type ALSACardName = string;
 export enum ALSAClass {
   Generic = "generic",
 }
@@ -580,63 +574,16 @@ export enum APIALSAPCMStream {
   Playback = "playback",
 }
 
-export enum APIV4L2CapBusInfo {
-  USB00002B00311 = "usb-0000:2b:00.3-1.1",
-}
-
-export enum APIV4L2CapCapabilities {
-  The84A00001 = "84a00001",
-}
-
-export enum APIV4L2CapCard {
-  NexiGoN930AFFHDWebcamNexiG = "NexiGo N930AF FHD Webcam: NexiG",
-}
-
-export enum APIV4L2CapDriver {
-  Uvcvideo = "uvcvideo",
-}
-
-export enum APIV4L2CapVersion {
-  The51555 = "5.15.55",
-}
-
-export enum APIV4L2Path {
-  DevVideo0 = "/dev/video0",
-  DevVideo1 = "/dev/video1",
-}
-
-export enum Application {
-  Discord = "Discord",
-  Firefox = "firefox",
-  PipewirePulse = "pipewire-pulse",
-  Plank = "plank",
-  PwDump = "pw-dump",
-  Python310 = "python3.10",
-  Spotify = "spotify",
-  Wireplumber = "wireplumber",
-}
-
-export enum ApplicationLanguage {
-  EnCAUTF8 = "en_CA.UTF-8",
-  EnUSUtf8 = "en_US.utf8",
-}
-
-export enum ApplicationName {
-  ChromiumInput = "Chromium input",
-  Firefox = "Firefox",
-  PipewirePulse = "pipewire-pulse",
-  Plank = "plank",
-  PwDump = "pw-dump",
-  Python310 = "python3.10",
-  Spotify = "spotify",
-  WEBRTCVoiceEngine = "WEBRTC VoiceEngine",
-  WirePlumber = "WirePlumber",
-  WirePlumberExport = "WirePlumber [export]",
-}
-
-export enum ApplicationProcessMachineID {
-  The13Db5F802Ca34B9Fb2Faae79A41B9A8C = "13db5f802ca34b9fb2faae79a41b9a8c",
-}
+export type APIV4L2CapBusInfo = string;
+export type APIV4L2CapCapabilities = string;
+export type APIV4L2CapCard = string;
+export type APIV4L2CapDriver = string;
+export type APIV4L2CapVersion = string;
+export type APIV4L2Path = string;
+export type Application = string;
+export type ApplicationLanguage = string;
+export type ApplicationName = string;
+export type ApplicationProcessMachineID = string;
 
 export enum AudioPosition {
   FLFr = "FL,FR",
@@ -654,9 +601,7 @@ export enum ConfigName {
   USRShareWireplumberWireplumberConf = "/usr/share/wireplumber/wireplumber.conf",
 }
 
-export enum CoreVersionEnum {
-  The0356 = "0.3.56",
-}
+export type CoreVersionEnum = string;
 
 export enum DeviceAPI {
   ALSA = "alsa",
@@ -668,13 +613,7 @@ export enum DeviceBus {
   USB = "usb",
 }
 
-export enum DeviceBusPath {
-  PCI000029001 = "pci-0000:29:00.1",
-  PCI00002B003USB01110 = "pci-0000:2b:00.3-usb-0:1.1:1.0",
-  PCI00002B003USB01112 = "pci-0000:2b:00.3-usb-0:1.1:1.2",
-  PCI00002B003USB01210 = "pci-0000:2b:00.3-usb-0:1.2:1.0",
-  PCI00002B004 = "pci-0000:2b:00.4",
-}
+export type DeviceBusPath = string;
 
 export enum DeviceCapabilities {
   Capture = ":capture:",
@@ -686,12 +625,7 @@ export enum DeviceClassEnum {
   Video4Linux = "video4linux",
 }
 
-export enum DeviceDescriptionEnum {
-  GP107GLHighDefinitionAudioController = "GP107GL High Definition Audio Controller",
-  NexiGoN930AFFHDWebcam = "NexiGo N930AF FHD Webcam",
-  ScarlettSolo3RDGen = "Scarlett Solo (3rd Gen.)",
-  StarshipMatisseHDAudioController = "Starship/Matisse HD Audio Controller",
-}
+export type DeviceDescriptionEnum = string;
 
 export enum DeviceEnumAPI {
   Udev = "udev",
@@ -703,13 +637,7 @@ export enum DeviceIconName {
   CameraWebAnalogUSB = "camera-web-analog-usb",
 }
 
-export enum DeviceProductID {
-  The0X0Fb9 = "0x0fb9",
-  The0X1487 = "0x1487",
-  The0X228 = "0x228",
-  The0X2283 = "0x2283",
-  The0X8211 = "0x8211",
-}
+export type DeviceProductID = string;
 
 export enum DeviceProfileDescription {
   AnalogStereo = "Analog Stereo",
@@ -727,13 +655,7 @@ export enum DeviceVendorID {
   The0X1Bcf = "0x1bcf",
 }
 
-export enum DeviceVendorName {
-  AdvancedMicroDevicesIncAMD = "Advanced Micro Devices, Inc. [AMD]",
-  FocusriteNovation = "Focusrite-Novation",
-  NVIDIACorporation = "NVIDIA Corporation",
-  ShenzhenAoniElectronicCoLtd = "SHENZHEN AONI ELECTRONIC CO., LTD",
-  SunplusInnovationTechnologyInc = "Sunplus Innovation Technology Inc.",
-}
+export type DeviceVendorName = string;
 
 export enum FactoryMode {
   Merge = "merge",
@@ -774,10 +696,7 @@ export enum MediaTypeEnum {
   Audio = "Audio",
 }
 
-export enum ModuleAuthor {
-  GeorgeKiagiadakisGeorgeKiagiadakisCollaboraCOM = "George Kiagiadakis <george.kiagiadakis@collabora.com>",
-  WimTaymansWimTaymansGmailCOM = "Wim Taymans <wim.taymans@gmail.com>",
-}
+export type ModuleAuthor = string;
 
 export enum NodeGroup {
   PipewireDummy = "pipewire.dummy",
@@ -849,10 +768,7 @@ export interface ValueClass {
   channels?: AudioChannel[];
 }
 
-export enum ValueName {
-  CarlaSink = "carla-sink",
-  CarlaSource = "carla-source",
-}
+export type ValueName = string;
 
 export enum Permission {
   M = "m",

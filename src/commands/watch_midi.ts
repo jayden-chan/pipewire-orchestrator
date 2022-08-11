@@ -571,7 +571,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const [watchMidiPromise, stream] = watchMidi(devicePort);
   const [pipewirePromise, pipewire] = watchPwDump();
   const [midishPromise, midishIn] = midish();
-  const [eqPromise, jalvIn] = jalv();
+  const [eqPromise, jalvIn] = jalv(rawConfig.lv2Path);
 
   const device = DEVICE_CONFS[dev];
   if (device === undefined) {

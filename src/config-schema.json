@@ -948,6 +948,9 @@
         "device": {
             "type": "string"
         },
+        "lv2Path": {
+            "type": "string"
+        },
         "outputMidi": {
             "type": "string"
         },

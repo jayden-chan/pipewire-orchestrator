@@ -14,6 +14,9 @@ export interface PipewireItem {
   metadata?: Metadatum[];
 }
 
+export type UserName = string;
+export type CoreName = string;
+
 export interface Info {
   cookie?: number;
   "user-name"?: UserName;
@@ -635,10 +638,6 @@ export enum ApplicationProcessMachineID {
   The13Db5F802Ca34B9Fb2Faae79A41B9A8C = "13db5f802ca34b9fb2faae79a41b9a8c",
 }
 
-export enum UserName {
-  Jayden = "jayden",
-}
-
 export enum AudioPosition {
   FLFr = "FL,FR",
 }
@@ -653,18 +652,6 @@ export enum ConfigName {
   PipewireConf = "pipewire.conf",
   PipewirePulseConf = "pipewire-pulse.conf",
   USRShareWireplumberWireplumberConf = "/usr/share/wireplumber/wireplumber.conf",
-}
-
-export enum CoreName {
-  Pipewire0 = "pipewire-0",
-  PipewireJayden10472 = "pipewire-jayden-10472",
-  PipewireJayden1070 = "pipewire-jayden-1070",
-  PipewireJayden1071 = "pipewire-jayden-1071",
-  PipewireJayden39022 = "pipewire-jayden-39022",
-  PipewireJayden39427 = "pipewire-jayden-39427",
-  PipewireJayden39992 = "pipewire-jayden-39992",
-  PipewireJayden41654 = "pipewire-jayden-41654",
-  PipewireJayden61929 = "pipewire-jayden-61929",
 }
 
 export enum CoreVersionEnum {

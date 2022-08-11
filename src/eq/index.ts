@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 import { Readable } from "stream";
 import { debug, error, log } from "../logger";
 
-export function jalv(): [Promise<void>, Readable] {
+export function jalv(lv2Path?: string): [Promise<void>, Readable] {
   const stream = new Readable({
     read() {},
   });
@@ -23,7 +23,7 @@ export function jalv(): [Promise<void>, Readable] {
         env: {
           ...process.env,
           DISPLAY: ":0",
-          LV2_PATH: "/usr/lib/lv2:/home/jayden/.config/dotfiles/afx/lv2",
+          LV2_PATH: lv2Path ?? "/usr/lib/lv2",
         },
       }
     );

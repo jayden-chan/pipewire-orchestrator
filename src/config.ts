@@ -200,6 +200,7 @@ export type Config = {
   device: string;
   outputMidi: string;
   bindings: Bindings;
+  lv2Path?: string;
   pipewire: {
     rules: PipeWireNodeConfig[];
   };

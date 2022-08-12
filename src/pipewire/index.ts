@@ -216,14 +216,17 @@ export function findLinkPair(
   | undefined {
   const items = Object.values(dump.items);
 
-  const srcNode = items.find(findPwNode(src.node));
-  if (srcNode === undefined) {
+  // there may be multiple matches for the srcPort just
+  // based on a search string, so we need to use filter here
+  // instead of find. same thing with the destination node
+  const srcNodes = items.filter(findPwNode(src.node));
+  if (srcNodes.length === 0) {
     warn(`[pw-link] failed to locate src node "${src.node}"`);
     return undefined;
   }
 
-  const destNode = items.find(findPwNode(dest.node));
-  if (destNode === undefined) {
+  const destNodes = items.filter(findPwNode(dest.node));
+  if (destNodes.length === 0) {
     warn(`[pw-link] failed to locate dest node "${dest.node}"`);
     return undefined;
   }
@@ -231,7 +234,7 @@ export function findLinkPair(
   const srcPort = items.find(
     (item) =>
       item.type === PipewireItemType.PipeWireInterfacePort &&
-      item.info?.props?.["node.id"] === srcNode.id &&
+      srcNodes.some((n) => item.info?.props?.["node.id"] === n.id) &&
       item.info?.props?.["port.name"] === src.port
   );
 
@@ -243,7 +246,7 @@ export function findLinkPair(
   const destPort = items.find(
     (item) =>
       item.type === PipewireItemType.PipeWireInterfacePort &&
-      item.info?.props?.["node.id"] === destNode.id &&
+      destNodes.some((n) => item.info?.props?.["node.id"] === n.id) &&
       item.info?.props?.["port.name"] === dest.port
   );
 
@@ -252,7 +255,20 @@ export function findLinkPair(
     return undefined;
   }
 
-  return { srcNode, srcPort, destNode, destPort };
+  const realSrcNode = srcNodes.find(
+    (n) => n.id === srcPort.info?.props?.["node.id"]
+  );
+  const realDestNode = destNodes.find(
+    (n) => n.id === destPort.info?.props?.["node.id"]
+  );
+
+  if (realSrcNode === undefined || realDestNode === undefined) {
+    throw new Error(
+      "[pw-link] Somehow found correct dest/src port without finding correct src/dest node"
+    );
+  }
+
+  return { srcNode: realSrcNode, srcPort, destNode: realDestNode, destPort };
 }
 
 async function modifyLink(

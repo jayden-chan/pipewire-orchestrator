@@ -246,80 +246,61 @@ async function handleNoteOn(
     return;
   }
 
-  if (context.shiftPressed) {
-    if (binding.onShiftLongPress !== undefined) {
-      const lp = binding.onShiftLongPress;
-      context.buttonTimeouts[button.label] = setTimeout(() => {
-        amidiSend(context.config.outputMidi, [
-          buttonLEDBytes(
-            button,
-            lp.color,
-            button.channel,
-            button.note,
-            context
-          ),
-        ]);
-
-        Promise.all(
-          lp.actions.map((bind) =>
-            handleButtonBinding(bind, button, event, context)
-          )
-        ).then(() => Promise.resolve());
-      }, lp.timeout);
-    }
-
-    if (binding.onShiftPress !== undefined) {
+  const executionFunc = (actions: ButtonBindAction[], color?: string) => {
+    return () => {
       amidiSend(context.config.outputMidi, [
-        buttonLEDBytes(
-          button,
-          binding.onShiftPress.color,
-          button.channel,
-          button.note,
-          context
-        ),
-      ]);
-
-      return Promise.all(
-        binding.onShiftPress.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, context)
-        )
-      ).then(() => Promise.resolve());
-    }
-
-    return;
-  }
-
-  if (binding.onLongPress !== undefined) {
-    const lp = binding.onLongPress;
-    context.buttonTimeouts[button.label] = setTimeout(() => {
-      amidiSend(context.config.outputMidi, [
-        buttonLEDBytes(button, lp.color, button.channel, button.note, context),
+        buttonLEDBytes(button, color, button.channel, button.note, context),
       ]);
 
       Promise.all(
-        lp.actions.map((bind) =>
-          handleButtonBinding(bind, button, event, context)
-        )
-      ).then(() => Promise.resolve());
-    }, lp.timeout);
-  }
-
-  if (binding.onPress !== undefined) {
-    amidiSend(context.config.outputMidi, [
-      buttonLEDBytes(
-        button,
-        binding.onPress.color,
-        button.channel,
-        button.note,
-        context
-      ),
-    ]);
-
-    return Promise.all(
-      binding.onPress.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, context)
+        actions.map((bind) => handleButtonBinding(bind, button, event, context))
       )
-    ).then(() => Promise.resolve());
+        .then(() => Promise.resolve())
+        .catch((err) => error(`[button-executor]`, err));
+    };
+  };
+
+  if (context.shiftPressed) {
+    if (binding.onShiftLongPress !== undefined) {
+      const { color, actions, timeout } = binding.onShiftLongPress;
+      const longPressFunc = executionFunc(actions, color);
+      const to: TimeoutFuncPair = [
+        setTimeout(() => {
+          longPressFunc();
+          delete context.buttonTimeouts[button.label];
+        }, timeout),
+        undefined,
+      ];
+      if (binding.onShiftPress !== undefined) {
+        to[1] = executionFunc(
+          binding.onShiftPress.actions,
+          binding.onShiftPress.color
+        );
+      }
+
+      context.buttonTimeouts[button.label] = to;
+    } else if (binding.onShiftPress !== undefined) {
+      executionFunc(binding.onShiftPress.actions, binding.onShiftPress.color)();
+    }
+  } else {
+    if (binding.onLongPress !== undefined) {
+      const { color, actions, timeout } = binding.onLongPress;
+      const longPressFunc = executionFunc(actions, color);
+      const to: TimeoutFuncPair = [
+        setTimeout(() => {
+          longPressFunc();
+          delete context.buttonTimeouts[button.label];
+        }, timeout),
+        undefined,
+      ];
+      if (binding.onPress !== undefined) {
+        to[1] = executionFunc(binding.onPress.actions, binding.onPress.color);
+      }
+
+      context.buttonTimeouts[button.label] = to;
+    } else if (binding.onPress !== undefined) {
+      executionFunc(binding.onPress.actions, binding.onPress.color)();
+    }
   }
 }
 
@@ -440,8 +421,13 @@ function handleNoteOff(event: MidiEventNoteOff, context: WatchMidiContext) {
     return;
   }
 
-  if (context.buttonTimeouts[button.label] !== undefined) {
-    clearTimeout(context.buttonTimeouts[button.label]);
+  const timeout = context.buttonTimeouts[button.label];
+  if (timeout !== undefined) {
+    clearTimeout(timeout[0]);
+    if (timeout[1] !== undefined) {
+      timeout[1]();
+    }
+
     delete context.buttonTimeouts[button.label];
   }
 
@@ -522,18 +508,23 @@ function handleMixerRule(
 }
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
+type ButtonLabel = string;
+type DialLabel = string;
+type ShiftPressed = boolean;
+type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
+
 export type WatchMidiContext = {
   config: RuntimeConfig;
   midishIn: Readable;
   jalvIn: Readable;
-  shiftPressed: boolean;
+  shiftPressed: ShiftPressed;
   rofiOpen: boolean;
   ranges: RangeStates;
-  mutes: Record<string, boolean>;
-  dials: Record<string, number>;
-  buttons: Record<string, number>;
-  buttonColors: Record<string, string>;
-  buttonTimeouts: Record<string, NodeJS.Timeout>;
+  mutes: Record<DialLabel, boolean>;
+  dials: Record<DialLabel, number>;
+  buttons: Record<ButtonLabel, number>;
+  buttonColors: Record<ButtonLabel, string>;
+  buttonTimeouts: Record<ButtonLabel, TimeoutFuncPair>;
   pipewire: {
     state: PipewireDump;
     timeout: NodeJS.Timeout | undefined;

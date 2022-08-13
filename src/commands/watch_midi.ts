@@ -620,7 +620,9 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     buttonColors: {},
     buttonTimeouts: {},
     mutes: {},
-    dials: {},
+    dials: Object.fromEntries(
+      device.dials.map((d) => [d.label, (d.range[1] - d.range[0]) / 2])
+    ),
     pipewire: {
       timeout: undefined,
       prevDevices: Object.fromEntries([

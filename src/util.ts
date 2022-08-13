@@ -5,7 +5,13 @@ import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
-import { findMixer, findPwNode, MixerChannels, PipewireDump } from "./pipewire";
+import {
+  findMixer,
+  findPwNode,
+  MixerChannels,
+  NodeWithPorts,
+  PipewireDump,
+} from "./pipewire";
 
 const PORT_RE = /client (\d+): '(.*?)'/;
 const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
@@ -145,24 +151,28 @@ export async function connectMidiDevices(
 }
 
 export function isAssignedToMixer(
-  nodeName: string,
+  node: NodeWithPorts,
   mixerChannels: MixerChannels,
   dump: PipewireDump
-): boolean {
+): NodeWithPorts | undefined {
   const mixer = findMixer(dump);
   if (mixer === undefined) {
-    return false;
+    return undefined;
   }
 
-  return Object.values(mixerChannels).some((nodes) => {
-    return nodes.ports.some((port) => {
-      const revLinks = dump.links.reverse[`${mixer.id}:${port.id}`];
-      return (
+  for (const mixerChannel of Object.values(mixerChannels)) {
+    for (const channelPort of mixerChannel.ports) {
+      const revLinks = dump.links.reverse[`${mixer.id}:${channelPort.id}`];
+      if (
         revLinks !== undefined &&
-        revLinks.links.some((link) => findPwNode(nodeName)(link[0]))
-      );
-    });
-  });
+        revLinks.links.some(([destNode]) => destNode.id === node.node.id)
+      ) {
+        return mixerChannel;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 export function freeMixerPorts(

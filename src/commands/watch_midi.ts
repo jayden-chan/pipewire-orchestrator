@@ -504,38 +504,67 @@ function handleMixerRule(
   channel: number | "round_robin",
   context: WatchMidiContext
 ) {
-  const nodeWithPort = audioClients(context.pipewire.state).find((source) =>
+  const appsToConnect = audioClients(context.pipewire.state).filter((source) =>
     findPwNode(nodeName)(source.node)
   );
+
   const dump = context.pipewire.state;
   const mixerChannels = mixerPorts(dump);
-  if (mixerChannels === undefined || nodeWithPort === undefined) {
+  if (mixerChannels === undefined || appsToConnect.length === 0) {
     return;
   }
 
-  if (isAssignedToMixer(nodeName, mixerChannels, dump)) {
-    return;
+  let currentlyAssignedChannel: NodeWithPorts | undefined;
+  for (const app of appsToConnect) {
+    const assignedChannel = isAssignedToMixer(app, mixerChannels, dump);
+
+    if (assignedChannel !== undefined) {
+      currentlyAssignedChannel = assignedChannel;
+      break;
+    }
   }
 
-  let chan: string | undefined = undefined;
-  if (typeof channel === "number") {
-    chan = `Mixer Channel ${channel}`;
-  } else {
-    const occupiedPorts = freeMixerPorts(mixerChannels, dump);
-    if (occupiedPorts === undefined) {
+  appsToConnect.forEach((appToConnect) => {
+    // if the app is currently assigned to a mixer channel, re-run
+    // the channel assignment function with the same settings. this ensures
+    // that all apps matching the search term are assigned to the same channel.
+    if (currentlyAssignedChannel !== undefined) {
+      debug(
+        `[mixer-reassign] connecting ${nodeName} to ${currentlyAssignedChannel.node.id}`
+      );
+      connectAppToMixer(
+        appToConnect,
+        currentlyAssignedChannel,
+        dump,
+        "smart"
+      ).catch((err) => error(`[mixer-reconnect]`, err));
       return;
     }
 
-    const freeChannel = Object.entries(occupiedPorts).find(([, free]) => free);
-    chan = freeChannel?.[0];
-  }
+    // app isn't assigned to a mixer channel, find one and
+    // assign it
+    let chan: string | undefined = undefined;
+    if (typeof channel === "number") {
+      chan = `Mixer Channel ${channel}`;
+    } else {
+      const occupiedPorts = freeMixerPorts(mixerChannels, dump);
+      if (occupiedPorts === undefined) {
+        return;
+      }
 
-  if (chan !== undefined) {
-    debug(`[mixer-assign] connecting ${nodeName} to ${chan}`);
-    connectAppToMixer(nodeWithPort, mixerChannels[chan], dump, "smart").catch(
-      (err) => error(`[mixer-auto-connect]`, err)
-    );
-  }
+      const freeChannel = Object.entries(occupiedPorts).find(
+        ([, free]) => free
+      );
+      chan = freeChannel?.[0];
+    }
+
+    if (chan !== undefined) {
+      debug(`[mixer-assign] connecting ${nodeName} to ${chan}`);
+      connectAppToMixer(appToConnect, mixerChannels[chan], dump, "smart").catch(
+        (err) => error(`[mixer-auto-connect]`, err)
+      );
+    }
+  });
 }
 
 type RangeStates = Record<string, { range: Range; idx: number }>;

@@ -71,14 +71,14 @@ export function audioClients(dump: PipewireDump): NodeWithPorts[] {
   );
 
   return pwVals
-    .map((e) => {
-      if (e.info?.props?.["application.name"] === undefined) {
+    .map((item) => {
+      if (item.info?.props?.["application.name"] === undefined) {
         return undefined;
       }
 
       const outputPorts = pwPorts.filter(
         (p) =>
-          p.info?.props?.["node.id"] === e.id &&
+          p.info?.props?.["node.id"] === item.id &&
           p.info?.["direction"] === "output" &&
           !p.info?.props?.["port.name"]?.toLowerCase().includes("monitor")
       );
@@ -87,7 +87,7 @@ export function audioClients(dump: PipewireDump): NodeWithPorts[] {
         return undefined;
       }
 
-      return { node: e, ports: outputPorts };
+      return { node: item, ports: outputPorts };
     })
     .filter((i) => i !== undefined) as NodeWithPorts[];
 }

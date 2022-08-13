@@ -751,6 +751,9 @@
             "additionalProperties": false,
             "description": "Execute a shell command when the binding is activated",
             "properties": {
+                "cancelable": {
+                    "type": "boolean"
+                },
                 "command": {
                     "type": "string"
                 },

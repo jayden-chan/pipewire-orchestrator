@@ -1,5 +1,4 @@
 import { exec, ExecException } from "child_process";
-import { log } from "console";
 import { WatchMidiContext } from "./commands/watch_midi";
 import { Bindings, PassthroughBinding } from "./config";
 import { Button, Dial } from "./devices";

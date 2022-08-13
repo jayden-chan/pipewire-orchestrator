@@ -18,6 +18,7 @@ export type DialRange = {
 export type CommandBinding = {
   type: "command";
   command: string;
+  cancelable?: boolean;
 };
 
 /**

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { handlePwLinkError } from "../errors";
-import { error, log, warn } from "../logger";
+import { debug, error, log, warn } from "../logger";
 import { run } from "../util";
 import { Convert, PipewireItem, PipewireItemType } from "./types";
 
@@ -174,7 +174,7 @@ export async function connectAppToMixer(
       !srcLinks.links.some(([, dPort]) => dPort.id === destPort.id)
     ) {
       const command = `pw-link "${sourcePortId}" "${destPort.id}"`;
-      log(`[command] ${command}`);
+      debug(`[command] ${command}`);
       proms.push(run(command).catch(handlePwLinkError));
     }
 
@@ -183,7 +183,7 @@ export async function connectAppToMixer(
       srcLinks.links.forEach(([, dPort]) => {
         if (dPort.id !== destPort.id) {
           const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
-          log(`[command] ${command}`);
+          debug(`[command] ${command}`);
           proms.push(run(command).catch(handlePwLinkError));
         }
       });
@@ -192,7 +192,7 @@ export async function connectAppToMixer(
       srcLinks.links.forEach(([dNode, dPort]) => {
         if (dNode.info?.props?.["node.description"] === "Audio Output") {
           const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
-          log(`[command] ${command}`);
+          debug(`[command] ${command}`);
           proms.push(run(command).catch(handlePwLinkError));
         }
       });
@@ -290,14 +290,14 @@ async function modifyLink(
       !srcLinks.links.some((link) => link[0].id === destNode.id))
   ) {
     const command = `pw-link "${srcPort.id}" "${destPort.id}"`;
-    log(`[command] ${command}`);
+    debug(`[command] ${command}`);
     await run(command);
   } else if (
     mode === "destroy" &&
     srcLinks?.links.some((link) => link[0].id === destNode.id)
   ) {
     const command = `pw-link -d "${srcPort.id}" "${destPort.id}"`;
-    log(`[command] ${command}`);
+    debug(`[command] ${command}`);
     await run(command);
   }
 }
@@ -335,7 +335,7 @@ export async function exclusiveLink(
     srcLinks.links.forEach(([, dPort]) => {
       if (dPort.id !== destPort.id) {
         const command = `pw-link -d "${srcPort.id}" "${dPort.id}"`;
-        log(`[command] ${command}`);
+        debug(`[command] ${command}`);
         run(command).catch(handlePwLinkError);
       }
     });

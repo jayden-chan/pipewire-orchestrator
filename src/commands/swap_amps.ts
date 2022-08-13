@@ -1,4 +1,4 @@
-import { error, log } from "../logger";
+import { debug, error, log } from "../logger";
 import { pipewireDump } from "../pipewire";
 import { run } from "../util";
 
@@ -45,9 +45,9 @@ export async function swapAmps() {
       NEXT_AMP[currName] ?? "Clean Amp"
     }:input_1"`;
 
-    log(`[command] ${deleteCommand}`);
+    debug(`[command] ${deleteCommand}`);
     await run(deleteCommand);
-    log(`[command] ${createCommand}`);
+    debug(`[command] ${createCommand}`);
     await run(createCommand);
   }
 }

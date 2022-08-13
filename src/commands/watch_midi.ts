@@ -6,6 +6,7 @@ import {
   RuntimeConfig,
 } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
+import { ChildProcess, exec } from "child_process";
 import { apcKey25 } from "../devices/apcKey25";
 import { jalv } from "../eq";
 import { handleAmidiError, handlePwLinkError } from "../errors";
@@ -337,14 +338,7 @@ async function handleButtonBinding(
       amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
     }
 
-    const timestamp = new Date().valueOf();
-    context.buttons[button.label] = timestamp;
-
-    return doActionBinding(binding, context, button).then(() => {
-      if (context.buttons[button.label] !== timestamp) {
-        return;
-      }
-
+    const onFinished = (timestamp: number) => {
       delete context.buttons[button.label];
 
       setTimeout(
@@ -368,18 +362,55 @@ async function handleButtonBinding(
         },
         new Date().valueOf() - timestamp < 150 ? 150 : 0
       );
+    };
+
+    if (
+      binding.cancelable === true &&
+      context.buttons[button.label] !== undefined
+    ) {
+      const [timestamp, process] = context.buttons[button.label];
+      if (process !== undefined) {
+        process.kill();
+      }
+      onFinished(timestamp);
+      return;
+    }
+
+    const timestamp = new Date().valueOf();
+    const childProcess = exec(binding.command, (err) => {
+      const buttonContext = context.buttons[button.label];
+      // command has already been killed, no need to run
+      // the callback
+      if (buttonContext === undefined) {
+        return;
+      }
+
+      if (err) {
+        error(`[cmd-exec]`, err);
+      }
+
+      // if another instance of the command is running concurrently as well,
+      // we shouldn't run the onFinished function
+      if (buttonContext[0] !== timestamp) {
+        return;
+      }
+      onFinished(timestamp);
     });
+
+    context.buttons[button.label] = [timestamp, childProcess];
+    return;
   }
 
   if (binding.type === "cycle") {
     if (context.buttons[button.label] === undefined) {
-      context.buttons[button.label] = 1;
+      context.buttons[button.label] = [1];
     } else {
-      context.buttons[button.label] =
-        (context.buttons[button.label] + 1) % binding.items.length;
+      context.buttons[button.label] = [
+        (context.buttons[button.label][0] + 1) % binding.items.length,
+      ];
     }
 
-    const newBind = binding.items[context.buttons[button.label]];
+    const newBind = binding.items[context.buttons[button.label][0]];
     const data = buttonLEDBytes(
       button,
       newBind.color,
@@ -522,7 +553,7 @@ export type WatchMidiContext = {
   ranges: RangeStates;
   mutes: Record<DialLabel, boolean>;
   dials: Record<DialLabel, number>;
-  buttons: Record<ButtonLabel, number>;
+  buttons: Record<ButtonLabel, [number] | [number, ChildProcess]>;
   buttonColors: Record<ButtonLabel, string>;
   buttonTimeouts: Record<ButtonLabel, TimeoutFuncPair>;
   pipewire: {

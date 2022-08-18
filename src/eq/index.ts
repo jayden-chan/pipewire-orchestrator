@@ -14,7 +14,7 @@ export function jalv(lv2Path?: string): [Promise<void>, Readable] {
         "-i0",
         "-o0",
         "-e0",
-        "/home/jayden/Dev/Testing/jalv/build/jalv.gtk3",
+        "jalv",
         "-n",
         "System Equalizer",
         "http://lsp-plug.in/plugins/lv2/para_equalizer_x16_stereo",
@@ -29,7 +29,7 @@ export function jalv(lv2Path?: string): [Promise<void>, Readable] {
     );
 
     cmd.on("close", (code) => {
-      log(`jalv.gtk3 process exited with code ${code}`);
+      log(`jalv process exited with code ${code}`);
       if (code === 0) {
         resolve();
       } else {

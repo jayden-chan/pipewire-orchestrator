@@ -78,12 +78,14 @@ export type ToggleMuteBinding = {
   dial: string;
 };
 
-export type EqShowGUIBinding = {
-  type: "eq::show_gui";
+export type LV2ShowGUIBinding = {
+  type: "lv2::show_gui";
+  pluginName: string;
 };
 
-export type EqLoadPresetBinding = {
-  type: "eq::load_preset";
+export type LV2LoadPresetBinding = {
+  type: "lv2::load_preset";
+  pluginName: string;
   preset: string;
 };
 
@@ -128,8 +130,8 @@ export type PipewireUnLinkBinding = {
 };
 
 export type ActionBinding =
-  | EqShowGUIBinding
-  | EqLoadPresetBinding
+  | LV2ShowGUIBinding
+  | LV2LoadPresetBinding
   | CommandBinding
   | ToggleMuteBinding
   | MidiBinding
@@ -196,6 +198,12 @@ export type PipeWireNodeConfig = {
   mixerChannel?: number | "round_robin";
 };
 
+export type LV2Plugin = {
+  uri: string;
+  name: string;
+  host: "jalv" | "jalv.gtk3";
+};
+
 export type Config = {
   connections: [string, string][];
   device: string;
@@ -204,6 +212,7 @@ export type Config = {
   lv2Path?: string;
   pipewire: {
     rules: PipeWireNodeConfig[];
+    plugins: LV2Plugin[];
   };
 };
 

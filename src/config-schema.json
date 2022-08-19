@@ -21,10 +21,10 @@
                     "description": "Toggle mute for the given dial"
                 },
                 {
-                    "$ref": "#/definitions/EqShowGUIBinding"
+                    "$ref": "#/definitions/LV2ShowGUIBinding"
                 },
                 {
-                    "$ref": "#/definitions/EqLoadPresetBinding"
+                    "$ref": "#/definitions/LV2LoadPresetBinding"
                 },
                 {
                     "$ref": "#/definitions/MixerSelectBinding",
@@ -59,18 +59,18 @@
         "CycleBinding": {
             "$ref": "#/definitions/__type_14"
         },
-        "EqLoadPresetBinding": {
-            "$ref": "#/definitions/__type_17"
-        },
-        "EqShowGUIBinding": {
-            "$ref": "#/definitions/__type_16"
-        },
         "KeyEventAction": {
             "$ref": "#/definitions/KeyEventAction_1",
             "description": "Actions(s) to execute on a key event such as a key\npress or release"
         },
         "KeyEventAction_1": {
             "$ref": "#/definitions/__type_3"
+        },
+        "LV2LoadPresetBinding": {
+            "$ref": "#/definitions/__type_17"
+        },
+        "LV2ShowGUIBinding": {
+            "$ref": "#/definitions/__type_16"
         },
         "LongPressAction": {
             "$ref": "#/definitions/LongPressAction_1",
@@ -348,10 +348,10 @@
                                             "description": "Toggle mute for the given dial"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                            "$ref": "#/definitions/LV2ShowGUIBinding"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                            "$ref": "#/definitions/LV2LoadPresetBinding"
                                         },
                                         {
                                             "$ref": "#/definitions/MixerSelectBinding",
@@ -420,14 +420,18 @@
         "__type_16": {
             "additionalProperties": false,
             "properties": {
+                "pluginName": {
+                    "type": "string"
+                },
                 "type": {
                     "enum": [
-                        "eq::show_gui"
+                        "lv2::show_gui"
                     ],
                     "type": "string"
                 }
             },
             "required": [
+                "pluginName",
                 "type"
             ],
             "type": "object"
@@ -435,17 +439,21 @@
         "__type_17": {
             "additionalProperties": false,
             "properties": {
+                "pluginName": {
+                    "type": "string"
+                },
                 "preset": {
                     "type": "string"
                 },
                 "type": {
                     "enum": [
-                        "eq::load_preset"
+                        "lv2::load_preset"
                     ],
                     "type": "string"
                 }
             },
             "required": [
+                "pluginName",
                 "preset",
                 "type"
             ],
@@ -643,10 +651,10 @@
                                 "description": "Toggle mute for the given dial"
                             },
                             {
-                                "$ref": "#/definitions/EqShowGUIBinding"
+                                "$ref": "#/definitions/LV2ShowGUIBinding"
                             },
                             {
-                                "$ref": "#/definitions/EqLoadPresetBinding"
+                                "$ref": "#/definitions/LV2LoadPresetBinding"
                             },
                             {
                                 "$ref": "#/definitions/MixerSelectBinding",
@@ -713,10 +721,10 @@
                                 "description": "Toggle mute for the given dial"
                             },
                             {
-                                "$ref": "#/definitions/EqShowGUIBinding"
+                                "$ref": "#/definitions/LV2ShowGUIBinding"
                             },
                             {
-                                "$ref": "#/definitions/EqLoadPresetBinding"
+                                "$ref": "#/definitions/LV2LoadPresetBinding"
                             },
                             {
                                 "$ref": "#/definitions/MixerSelectBinding",
@@ -960,6 +968,33 @@
         "pipewire": {
             "additionalProperties": false,
             "properties": {
+                "plugins": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "host": {
+                                "enum": [
+                                    "jalv",
+                                    "jalv.gtk3"
+                                ],
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "uri": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "host",
+                            "name",
+                            "uri"
+                        ],
+                        "type": "object"
+                    },
+                    "type": "array"
+                },
                 "rules": {
                     "items": {
                         "additionalProperties": false,
@@ -1000,10 +1035,10 @@
                                             "description": "Toggle mute for the given dial"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                            "$ref": "#/definitions/LV2ShowGUIBinding"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                            "$ref": "#/definitions/LV2LoadPresetBinding"
                                         },
                                         {
                                             "$ref": "#/definitions/MixerSelectBinding",
@@ -1045,10 +1080,10 @@
                                             "description": "Toggle mute for the given dial"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqShowGUIBinding"
+                                            "$ref": "#/definitions/LV2ShowGUIBinding"
                                         },
                                         {
-                                            "$ref": "#/definitions/EqLoadPresetBinding"
+                                            "$ref": "#/definitions/LV2LoadPresetBinding"
                                         },
                                         {
                                             "$ref": "#/definitions/MixerSelectBinding",
@@ -1080,6 +1115,7 @@
                 }
             },
             "required": [
+                "plugins",
                 "rules"
             ],
             "type": "object"

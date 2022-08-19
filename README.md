@@ -43,7 +43,7 @@ purpose input devices instead of just for musical performances.
 ## TODO
 
 - [ ] Hot reloading config file
-- [ ] Improve and extend LV2 plugin host capabilities
+- [x] Improve and extend LV2 plugin host capabilities
 - [ ] Improve LED control in config file
 - [x] Batch hex requests to amidi
 - [ ] Layers

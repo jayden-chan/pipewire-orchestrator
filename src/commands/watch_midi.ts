@@ -75,11 +75,17 @@ async function doActionBinding(
     case "midi":
       context.midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
       return;
-    case "eq::load_preset":
-      context.jalvIn.push(`preset ${binding.preset}`);
+    case "lv2::load_preset":
+      if (context.pluginStreams[binding.pluginName] !== undefined) {
+        context.pluginStreams[binding.pluginName].push(
+          `preset ${binding.preset}`
+        );
+      }
       return;
-    case "eq::show_gui":
-      context.jalvIn.push("show");
+    case "lv2::show_gui":
+      if (context.pluginStreams[binding.pluginName] !== undefined) {
+        context.pluginStreams[binding.pluginName].push("show");
+      }
       return;
     case "pipewire::link":
       return ensureLink(
@@ -568,6 +574,7 @@ function handleMixerRule(
 }
 
 type RangeStates = Record<string, { range: Range; idx: number }>;
+type PluginName = string;
 type ButtonLabel = string;
 type DialLabel = string;
 type ShiftPressed = boolean;
@@ -576,7 +583,7 @@ type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
 export type WatchMidiContext = {
   config: RuntimeConfig;
   midishIn: Readable;
-  jalvIn: Readable;
+  pluginStreams: Record<PluginName, Readable>;
   shiftPressed: ShiftPressed;
   rofiOpen: boolean;
   ranges: RangeStates;
@@ -617,7 +624,19 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const [watchMidiPromise, stream] = watchMidi(devicePort);
   const [pipewirePromise, pipewire] = watchPwDump();
   const [midishPromise, midishIn] = midish();
-  const [eqPromise, jalvIn] = jalv(rawConfig.lv2Path);
+
+  // mapping of plugin name to its input stream
+  const pluginStreams = Object.fromEntries(
+    rawConfig.pipewire.plugins.map((plugin) => {
+      log(`[lv2] starting plugin "${plugin.name}"`);
+      const [prom, stream] = jalv(plugin, rawConfig.lv2Path);
+      prom.catch((err) => {
+        error(`Error: plugin "${plugin.name}" crashed!`);
+        error(err);
+      });
+      return [plugin.name, stream];
+    })
+  );
 
   const device = DEVICE_CONFS[dev];
   if (device === undefined) {
@@ -653,7 +672,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   const context: WatchMidiContext = {
     config,
     midishIn,
-    jalvIn,
+    pluginStreams,
     shiftPressed: false,
     rofiOpen: false,
     buttons: {},
@@ -746,12 +765,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
   });
 
   try {
-    await Promise.race([
-      watchMidiPromise,
-      pipewirePromise,
-      midishPromise,
-      eqPromise,
-    ]);
+    await Promise.race([watchMidiPromise, pipewirePromise, midishPromise]);
     return 0;
   } catch (err) {
     error(`Problem ocurred with midi watch: exit code ${err}`);

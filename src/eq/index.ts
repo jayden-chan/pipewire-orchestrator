@@ -1,8 +1,12 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
+import { LV2Plugin } from "../config";
 import { debug, error, log } from "../logger";
 
-export function jalv(lv2Path?: string): [Promise<void>, Readable] {
+export function jalv(
+  plugin: LV2Plugin,
+  lv2Path?: string
+): [Promise<void>, Readable] {
   const stream = new Readable({
     read() {},
   });
@@ -10,15 +14,7 @@ export function jalv(lv2Path?: string): [Promise<void>, Readable] {
   const prom = new Promise<void>((resolve, reject) => {
     const cmd = spawn(
       "stdbuf",
-      [
-        "-i0",
-        "-o0",
-        "-e0",
-        "jalv",
-        "-n",
-        "System Equalizer",
-        "http://lsp-plug.in/plugins/lv2/para_equalizer_x16_stereo",
-      ],
+      ["-i0", "-o0", "-e0", plugin.host, "-n", plugin.name, plugin.uri],
       {
         env: {
           ...process.env,

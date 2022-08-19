@@ -603,8 +603,15 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     return 1;
   }
 
+  const outputPort = await findDevicePort(rawConfig.outputMidi);
+  if (!outputPort) {
+    error("Failed to extract port from device listing");
+    return 1;
+  }
+
+  const [aconnectListing] = await run("aconnect --list");
   for (const [d1, d2] of rawConfig.connections) {
-    await connectMidiDevices(d1, d2);
+    await connectMidiDevices(aconnectListing, d1, d2);
   }
 
   const [watchMidiPromise, stream] = watchMidi(devicePort);
@@ -618,7 +625,11 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
     return 1;
   }
 
-  const config: RuntimeConfig = { ...rawConfig, device };
+  const config: RuntimeConfig = {
+    ...rawConfig,
+    device,
+    outputMidi: outputPort,
+  };
   const onConnectRules: Array<[string, ActionBinding[]]> = config.pipewire.rules
     .filter((rule) => rule.onConnect !== undefined)
     .map((rule) => [rule.node, rule.onConnect]) as [string, ActionBinding[]][];

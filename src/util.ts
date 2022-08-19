@@ -107,22 +107,34 @@ export async function findDevicePort(
 ): Promise<string | undefined> {
   const [amidil] = await run("amidi --list-devices");
   const amidilLines = amidil.split(/\r?\n/g);
-  const devicePortLine = amidilLines.find((line) => line.includes(name));
-  if (devicePortLine === undefined) {
+  const searchName = name.startsWith("virt:") ? "Virtual Raw MIDI" : name;
+  const devicePortLines = amidilLines.filter((line) =>
+    line.includes(searchName)
+  );
+  const ports = devicePortLines
+    .map((l) => l.match(deviceRe))
+    .filter((l) => l !== null);
+  if (devicePortLines.length === 0 || ports.length === 0) {
     error(`Unable to locate device "${name}"`);
     return undefined;
   }
 
-  const [, devicePort] = devicePortLine.match(deviceRe) ?? [];
-  return devicePort;
+  const ret =
+    ports[name.startsWith("virt:") ? Number(name.replace("virt:", "")) : 0];
+
+  if (ret !== undefined) {
+    return ret![1];
+  } else {
+    error(`Unable to locate device "${name}"`);
+    return undefined;
+  }
 }
 
 export async function connectMidiDevices(
+  aconnectListing: string,
   d1: string,
   d2: string
 ): Promise<void> {
-  const [aconnectListing] = await run("aconnect --list");
-
   const devices = aconnectListing.split(/\r?\n/g).map((line) => {
     const [, clientNum, name] = line.match(PORT_RE) ?? [];
     debug(clientNum, name);
@@ -133,7 +145,7 @@ export async function connectMidiDevices(
   const d2Client = devices.find((d) => d.name === d2)?.clientNum;
 
   if (d1Client === undefined || d2Client === undefined) {
-    error(`Failed to locate either "${d1}" or "${d2}"`);
+    warn(`Failed to locate either "${d1}" or "${d2}"`);
     return;
   }
 

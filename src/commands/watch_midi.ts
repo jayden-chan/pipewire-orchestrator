@@ -8,7 +8,7 @@ import {
 import { Button, Device, Dial, Range } from "../devices";
 import { ChildProcess, exec } from "child_process";
 import { apcKey25 } from "../devices/apcKey25";
-import { jalv } from "../eq";
+import { jalv } from "../jalv";
 import { handleAmidiError, handlePwLinkError } from "../errors";
 import { debug, error, log } from "../logger";
 import {

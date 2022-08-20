@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { LV2Plugin } from "../config";
-import { debug, error, log } from "../logger";
+import { LV2Plugin } from "./config";
+import { debug, error, log } from "./logger";
 
 export function jalv(
   plugin: LV2Plugin,

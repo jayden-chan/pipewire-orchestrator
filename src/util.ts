@@ -1,5 +1,5 @@
 import { exec, ExecException } from "child_process";
-import { WatchMidiContext } from "./commands/watch_midi";
+import { WatchCmdContext } from "./commands/daemon";
 import { Bindings, PassthroughBinding } from "./config";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
@@ -7,7 +7,6 @@ import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
 import {
   findMixer,
-  findPwNode,
   MixerChannels,
   NodeWithPorts,
   PipewireDump,
@@ -43,7 +42,7 @@ const MAP_FUNCTIONS = {
 export function computeMappedVal(
   input: number,
   dial: Dial,
-  context: WatchMidiContext,
+  context: WatchCmdContext,
   binding: PassthroughBinding
 ): number {
   let pct = input / (dial.range[1] - dial.range[0]);
@@ -59,7 +58,7 @@ export function computeMappedVal(
 export function manifestDialValue(
   dialName: string,
   value: number,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ) {
   const dialBinding = Object.entries(context.config.bindings).find(
     ([dial]) => dial === dialName
@@ -213,7 +212,7 @@ export function buttonLEDBytes(
   color: string | undefined,
   channel: number,
   note: number,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ): ByteTriplet | undefined {
   if (button.ledStates !== undefined && color !== undefined) {
     const ledState = Object.entries(button.ledStates).find(
@@ -237,7 +236,7 @@ export function buttonLEDBytes(
 
 export function defaultLEDStates(
   bindings: Bindings,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ): ByteTriplet[] {
   return Object.entries(bindings).flatMap(([key, buttonBind]) => {
     const button = context.config.device.buttons.find((b) => b.label === key);

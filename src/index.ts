@@ -1,21 +1,21 @@
 import { swapAmps } from "./commands/swap_amps";
-import { watchMidiCommand } from "./commands/watch_midi";
+import { daemonCommand } from "./commands/daemon";
 
 async function main() {
   const cmd = process.argv[2];
   if (cmd === undefined) {
-    console.error(`Specify a command: "watch_midi", or "swap_amps"`);
+    console.error(`Specify a command: "daemon", or "swap_amps"`);
     return;
   }
 
-  if (cmd === "watch_midi") {
+  if (cmd === "daemon") {
     const device = process.argv[3];
     if (device === undefined) {
-      console.error(`Usage: watch_midi </path/to/config.json>`);
+      console.error(`Usage: daemon </path/to/config.json>`);
       return;
     }
 
-    const exitCode = await watchMidiCommand(device);
+    const exitCode = await daemonCommand(device);
     process.exit(exitCode);
   }
 
@@ -24,9 +24,7 @@ async function main() {
     return;
   }
 
-  console.error(
-    `Invalid command: "${cmd}". Options: "watch_midi", or "swap_amps"`
-  );
+  console.error(`Invalid command: "${cmd}". Options: "daemon", or "swap_amps"`);
 }
 
 main();

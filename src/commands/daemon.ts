@@ -62,7 +62,7 @@ const findDial = (event: MidiEventControlChange) => {
 
 async function doActionBinding(
   binding: ActionBinding,
-  context: WatchMidiContext,
+  context: WatchCmdContext,
   button?: Button
 ): Promise<void> {
   switch (binding.type) {
@@ -226,7 +226,7 @@ async function doActionBinding(
 
 async function handleNoteOn(
   event: MidiEventNoteOn,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ): Promise<void> {
   if (event.channel === context.config.device.keys.channel) {
     debug(`Key ON ${event.note} velocity ${event.velocity}`);
@@ -315,7 +315,7 @@ async function handleButtonBinding(
   binding: ButtonBindAction,
   button: Button,
   event: MidiEventNoteOn | MidiEventNoteOff,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ) {
   if (binding.type === "cancel") {
     if (context.rofiOpen) {
@@ -436,7 +436,7 @@ async function handleButtonBinding(
   return doActionBinding(binding, context, button);
 }
 
-function handleNoteOff(event: MidiEventNoteOff, context: WatchMidiContext) {
+function handleNoteOff(event: MidiEventNoteOff, context: WatchCmdContext) {
   if (event.channel === context.config.device.keys.channel) {
     debug(`Key OFF ${event.note} velocity ${event.velocity}`);
     return;
@@ -489,7 +489,7 @@ function handleNoteOff(event: MidiEventNoteOff, context: WatchMidiContext) {
 
 function handleControlChange(
   event: MidiEventControlChange,
-  context: WatchMidiContext
+  context: WatchCmdContext
 ) {
   // shift key disables dials. useful for changing
   // dial ranges without having skips in output
@@ -508,7 +508,7 @@ function handleControlChange(
 function handleMixerRule(
   nodeName: string,
   channel: number | "round_robin",
-  context: WatchMidiContext
+  context: WatchCmdContext
 ) {
   const appsToConnect = audioClients(context.pipewire.state).filter((source) =>
     findPwNode(nodeName)(source.node)
@@ -580,7 +580,7 @@ type DialLabel = string;
 type ShiftPressed = boolean;
 type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
 
-export type WatchMidiContext = {
+export type WatchCmdContext = {
   config: RuntimeConfig;
   midishIn: Readable;
   pluginStreams: Record<PluginName, Readable>;
@@ -599,7 +599,7 @@ export type WatchMidiContext = {
   };
 };
 
-export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
+export async function daemonCommand(configPath: string): Promise<0 | 1> {
   const rawConfig = await readConfig(configPath);
   log("Loaded config file");
 
@@ -669,7 +669,7 @@ export async function watchMidiCommand(configPath: string): Promise<0 | 1> {
       number | "round_robin"
     ][];
 
-  const context: WatchMidiContext = {
+  const context: WatchCmdContext = {
     config,
     midishIn,
     pluginStreams,

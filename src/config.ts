@@ -1,6 +1,6 @@
 import Ajv from "ajv";
-import { parse as YAMLParse } from "yaml";
 import { readFile } from "fs/promises";
+import { parse as YAMLParse } from "yaml";
 import { Device, Range } from "./devices";
 import { MidiEvent } from "./midi";
 import { NodeAndPort } from "./pipewire";

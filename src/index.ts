@@ -1,5 +1,5 @@
-import { swapAmps } from "./commands/swap_amps";
 import { daemonCommand } from "./commands/daemon";
+import { swapAmps } from "./commands/swap_amps";
 
 async function main() {
   const cmd = process.argv[2];

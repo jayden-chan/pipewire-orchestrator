@@ -1,3 +1,4 @@
+import { ChildProcess, exec } from "child_process";
 import { Readable } from "stream";
 import {
   ActionBinding,
@@ -6,10 +7,9 @@ import {
   RuntimeConfig,
 } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
-import { ChildProcess, exec } from "child_process";
 import { apcKey25 } from "../devices/apcKey25";
-import { jalv } from "../jalv";
 import { handleAmidiError, handlePwLinkError } from "../errors";
+import { jalv } from "../jalv";
 import { debug, error, log } from "../logger";
 import {
   amidiSend,

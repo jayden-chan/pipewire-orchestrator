@@ -1,4 +1,4 @@
-import { debug, error, log } from "../logger";
+import { debug, error } from "../logger";
 import { pipewireDump } from "../pipewire";
 import { run } from "../util";
 

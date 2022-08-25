@@ -61,8 +61,7 @@ const findDial = (event: MidiEventControlChange) => {
 
 async function doActionBinding(
   binding: ActionBinding,
-  context: WatchCmdContext,
-  button?: Button
+  context: WatchCmdContext
 ): Promise<void> {
   switch (binding.type) {
     case "command":
@@ -104,6 +103,19 @@ async function doActionBinding(
         binding.dest,
         context.pipewire.state
       ).catch(handlePwLinkError);
+    case "range":
+      context.ranges[binding.dial] = binding.range;
+      // update the dial value immediately so we don't get a jump
+      // in volume the next time the dial is moved
+      return manifestDialValue(
+        binding.dial,
+        context.dials[binding.dial] ?? 0,
+        context
+      );
+    case "led::save":
+      context.ledSaveStates[binding.button] =
+        context.buttonColors[binding.button];
+      return;
   }
 
   if (binding.type === "mute") {
@@ -142,12 +154,6 @@ async function doActionBinding(
       context
     );
     return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
-  }
-
-  if (binding.type === "led::save") {
-    context.ledSaveStates[binding.button] =
-      context.buttonColors[binding.button];
-    return;
   }
 
   if (binding.type == "mixer::select") {
@@ -194,17 +200,6 @@ async function doActionBinding(
           })
         );
       });
-  }
-
-  if (binding.type === "range") {
-    context.ranges[binding.dial] = binding.range;
-    // update the dial value immediately so we don't get a jump
-    // in volume the next time the dial is moved
-    return manifestDialValue(
-      binding.dial,
-      context.dials[binding.dial] ?? 0,
-      context
-    );
   }
 }
 
@@ -305,7 +300,7 @@ async function handleButtonBinding(
     if (context.rofiOpen) {
       run("xdotool key Escape").catch((err) => error(err));
     } else if (binding.alt !== undefined) {
-      return doActionBinding(binding.alt, context, button);
+      return doActionBinding(binding.alt, context);
     }
     return;
   }
@@ -412,12 +407,12 @@ async function handleButtonBinding(
     amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
     return Promise.all(
       newBind.actions.map((bind) => {
-        return doActionBinding(bind, context, button);
+        return doActionBinding(bind, context);
       })
     ).then(() => Promise.resolve());
   }
 
-  return doActionBinding(binding, context, button);
+  return doActionBinding(binding, context);
 }
 
 function handleNoteOff(event: MidiEventNoteOff, context: WatchCmdContext) {

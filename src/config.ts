@@ -71,10 +71,11 @@ export type CancelBinding = {
 };
 
 /**
- * Toggle mute for the given dial
+ * Turn on or off mute for the given dial
  */
 export type ToggleMuteBinding = {
   type: "mute";
+  mute: boolean;
   dial: string;
 };
 
@@ -129,6 +130,12 @@ export type PipewireUnLinkBinding = {
   dest: NodeAndPort;
 };
 
+export type LEDSetBinding = {
+  type: "led::set";
+  button: string;
+  color: string;
+};
+
 export type ActionBinding =
   | LV2ShowGUIBinding
   | LV2LoadPresetBinding
@@ -139,6 +146,7 @@ export type ActionBinding =
   | PipewireUnLinkBinding
   | PipewireExclusiveLinkBinding
   | RangeBinding
+  | LEDSetBinding
   | MixerSelectBinding;
 
 export type ButtonBindAction =

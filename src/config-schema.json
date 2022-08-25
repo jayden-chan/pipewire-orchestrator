@@ -18,7 +18,7 @@
                 },
                 {
                     "$ref": "#/definitions/ToggleMuteBinding",
-                    "description": "Toggle mute for the given dial"
+                    "description": "Turn on or off mute for the given dial"
                 },
                 {
                     "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -41,6 +41,9 @@
                 {
                     "$ref": "#/definitions/PipewireUnLinkBinding",
                     "description": "Destroy a link between two nodes and ports within PipeWire"
+                },
+                {
+                    "$ref": "#/definitions/LEDSetBinding"
                 }
             ]
         },
@@ -51,7 +54,7 @@
             "$ref": "#/definitions/__type_2"
         },
         "CancelBinding": {
-            "$ref": "#/definitions/__type_23"
+            "$ref": "#/definitions/__type_24"
         },
         "CommandBinding": {
             "$ref": "#/definitions/__type_4"
@@ -66,6 +69,9 @@
         "KeyEventAction_1": {
             "$ref": "#/definitions/__type_3"
         },
+        "LEDSetBinding": {
+            "$ref": "#/definitions/__type_23"
+        },
         "LV2LoadPresetBinding": {
             "$ref": "#/definitions/__type_17"
         },
@@ -77,7 +83,7 @@
             "description": "Action(s) to execute on long press"
         },
         "LongPressAction_1": {
-            "$ref": "#/definitions/__type_24"
+            "$ref": "#/definitions/__type_25"
         },
         "MapFunction": {
             "enum": [
@@ -345,7 +351,7 @@
                                         },
                                         {
                                             "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Toggle mute for the given dial"
+                                            "description": "Turn on or off mute for the given dial"
                                         },
                                         {
                                             "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -368,6 +374,9 @@
                                         {
                                             "$ref": "#/definitions/PipewireUnLinkBinding",
                                             "description": "Destroy a link between two nodes and ports within PipeWire"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/LEDSetBinding"
                                         }
                                     ]
                                 },
@@ -399,10 +408,13 @@
         },
         "__type_15": {
             "additionalProperties": false,
-            "description": "Toggle mute for the given dial",
+            "description": "Turn on or off mute for the given dial",
             "properties": {
                 "dial": {
                     "type": "string"
+                },
+                "mute": {
+                    "type": "boolean"
                 },
                 "type": {
                     "enum": [
@@ -413,6 +425,7 @@
             },
             "required": [
                 "dial",
+                "mute",
                 "type"
             ],
             "type": "object"
@@ -602,6 +615,29 @@
         },
         "__type_23": {
             "additionalProperties": false,
+            "properties": {
+                "button": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "led::set"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "button",
+                "color",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_24": {
+            "additionalProperties": false,
             "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)",
             "properties": {
                 "alt": {
@@ -619,7 +655,7 @@
             ],
             "type": "object"
         },
-        "__type_24": {
+        "__type_25": {
             "additionalProperties": false,
             "description": "Action(s) to execute on long press",
             "properties": {
@@ -648,7 +684,7 @@
                             },
                             {
                                 "$ref": "#/definitions/ToggleMuteBinding",
-                                "description": "Toggle mute for the given dial"
+                                "description": "Turn on or off mute for the given dial"
                             },
                             {
                                 "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -671,6 +707,9 @@
                             {
                                 "$ref": "#/definitions/PipewireUnLinkBinding",
                                 "description": "Destroy a link between two nodes and ports within PipeWire"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDSetBinding"
                             }
                         ]
                     },
@@ -718,7 +757,7 @@
                             },
                             {
                                 "$ref": "#/definitions/ToggleMuteBinding",
-                                "description": "Toggle mute for the given dial"
+                                "description": "Turn on or off mute for the given dial"
                             },
                             {
                                 "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -741,6 +780,9 @@
                             {
                                 "$ref": "#/definitions/PipewireUnLinkBinding",
                                 "description": "Destroy a link between two nodes and ports within PipeWire"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDSetBinding"
                             }
                         ]
                     },
@@ -1032,7 +1074,7 @@
                                         },
                                         {
                                             "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Toggle mute for the given dial"
+                                            "description": "Turn on or off mute for the given dial"
                                         },
                                         {
                                             "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -1055,6 +1097,9 @@
                                         {
                                             "$ref": "#/definitions/PipewireUnLinkBinding",
                                             "description": "Destroy a link between two nodes and ports within PipeWire"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/LEDSetBinding"
                                         }
                                     ]
                                 },
@@ -1077,7 +1122,7 @@
                                         },
                                         {
                                             "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Toggle mute for the given dial"
+                                            "description": "Turn on or off mute for the given dial"
                                         },
                                         {
                                             "$ref": "#/definitions/LV2ShowGUIBinding"
@@ -1100,6 +1145,9 @@
                                         {
                                             "$ref": "#/definitions/PipewireUnLinkBinding",
                                             "description": "Destroy a link between two nodes and ports within PipeWire"
+                                        },
+                                        {
+                                            "$ref": "#/definitions/LEDSetBinding"
                                         }
                                     ]
                                 },

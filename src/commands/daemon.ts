@@ -10,7 +10,7 @@ import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { handleAmidiError, handlePwLinkError } from "../errors";
 import { jalv } from "../jalv";
-import { debug, error, log } from "../logger";
+import { debug, error, log, warn } from "../logger";
 import {
   amidiSend,
   ByteTriplet,
@@ -109,26 +109,35 @@ async function doActionBinding(
 
   if (binding.type === "mute") {
     let controlVal = 0;
-    let ledBytes: ByteTriplet | undefined = undefined;
-
-    if (context.mutes[binding.dial]) {
-      context.mutes[binding.dial] = false;
-      controlVal = context.dials[binding.dial] ?? 0;
-      ledBytes =
-        button &&
-        buttonLEDBytes(button, "GREEN", button.channel, button.note, context);
-    } else {
+    if (binding.mute) {
       context.mutes[binding.dial] = true;
       controlVal = 0;
-      ledBytes =
-        button &&
-        buttonLEDBytes(button, "RED", button.channel, button.note, context);
+    } else {
+      context.mutes[binding.dial] = false;
+      controlVal = context.dials[binding.dial] ?? 0;
     }
 
-    manifestDialValue(binding.dial, controlVal, context);
-    return amidiSend(context.config.outputMidi, [ledBytes]).catch(
-      handleAmidiError
+    return manifestDialValue(binding.dial, controlVal, context);
+  }
+
+  if (binding.type === "led::set") {
+    const button = context.config.device.buttons.find(
+      (b) => b.label === binding.button
     );
+
+    if (button === undefined) {
+      warn(`[led::set]`, `button "${binding.button}" not found`);
+      return;
+    }
+
+    const data = buttonLEDBytes(
+      button,
+      binding.color,
+      button.channel,
+      button.note,
+      context
+    );
+    return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
   }
 
   if (binding.type == "mixer::select") {

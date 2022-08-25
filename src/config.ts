@@ -91,7 +91,7 @@ export type LV2LoadPresetBinding = {
  */
 export type MixerSelectBinding = {
   type: "mixer::select";
-  pendingColor?: string;
+  onFinish?: ActionBinding[];
   channel: number;
 };
 
@@ -125,10 +125,30 @@ export type PipewireUnLinkBinding = {
   dest: NodeAndPort;
 };
 
+/**
+ * Set the given button LED to the given color
+ */
 export type LEDSetBinding = {
   type: "led::set";
   button: string;
   color: string;
+};
+
+/**
+ * Save the LED state of the given button
+ */
+export type LEDSaveBinding = {
+  type: "led::save";
+  button: string;
+};
+
+/**
+ * Restore the previously saved LED state of the
+ * given button
+ */
+export type LEDRestoreBinding = {
+  type: "led::restore";
+  button: string;
 };
 
 export type ActionBinding =
@@ -142,6 +162,8 @@ export type ActionBinding =
   | PipewireExclusiveLinkBinding
   | RangeBinding
   | LEDSetBinding
+  | LEDSaveBinding
+  | LEDRestoreBinding
   | MixerSelectBinding;
 
 export type ButtonBindAction =

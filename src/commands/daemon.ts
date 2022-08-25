@@ -119,7 +119,7 @@ async function doActionBinding(
     return manifestDialValue(binding.dial, controlVal, context);
   }
 
-  if (binding.type === "led::set") {
+  if (binding.type === "led::set" || binding.type === "led::restore") {
     const button = context.config.device.buttons.find(
       (b) => b.label === binding.button
     );
@@ -129,9 +129,14 @@ async function doActionBinding(
       return;
     }
 
+    const color =
+      binding.type === "led::set"
+        ? binding.color
+        : context.ledSaveStates[binding.button];
+
     const data = buttonLEDBytes(
       button,
-      binding.color,
+      color,
       button.channel,
       button.note,
       context
@@ -139,32 +144,16 @@ async function doActionBinding(
     return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
   }
 
+  if (binding.type === "led::save") {
+    context.ledSaveStates[binding.button] =
+      context.buttonColors[binding.button];
+    return;
+  }
+
   if (binding.type == "mixer::select") {
-    let resetLED = () => {};
-    if (button !== undefined) {
-      const initialButtonColor = context.buttonColors[button.label];
-
-      const data = buttonLEDBytes(
-        button,
-        binding.pendingColor,
-        button.channel,
-        button.note,
-        context
-      );
-      amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
-
-      resetLED = () => {
-        if (button !== undefined) {
-          const data = buttonLEDBytes(
-            button,
-            initialButtonColor,
-            button.channel,
-            button.note,
-            context
-          );
-          amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
-        }
-      };
+    // can't open rofi twice at the same time
+    if (context.rofiOpen) {
+      return;
     }
 
     const mixerChannels = mixerPorts(context.pipewire.state);
@@ -183,18 +172,28 @@ async function doActionBinding(
     const sourcesString = Object.keys(sources).join("\n");
     const cmd = `echo "${sourcesString}" | rofi -dmenu -i -p "select source:" -theme links`;
     return run(cmd)
-      .then(([stdout]) => {
+      .then(async ([stdout]) => {
         const source = sources[stdout.trim()];
         const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
-        connectAppToMixer(
+        return connectAppToMixer(
           source,
           channel,
           context.pipewire.state,
           "smart"
-        ).then(() => resetLED());
+        );
       })
-      .catch((_) => resetLED())
-      .finally(() => (context.rofiOpen = false));
+      .catch((_) => {})
+      .finally(() => {
+        context.rofiOpen = false;
+        (binding.onFinish ?? []).forEach((action) =>
+          doActionBinding(action, context).catch((err) => {
+            error(
+              `[mixer::select]`,
+              `Error ocurred in onFinish handler: ${err}`
+            );
+          })
+        );
+      });
   }
 
   if (binding.type === "range") {
@@ -570,9 +569,10 @@ export type WatchCmdContext = {
   pluginStreams: Record<PluginName, Readable>;
   shiftPressed: ShiftPressed;
   rofiOpen: boolean;
-  ranges: Record<string, Range>;
+  ranges: Record<DialLabel, Range>;
   mutes: Record<DialLabel, boolean>;
   dials: Record<DialLabel, number>;
+  ledSaveStates: Record<ButtonLabel, string>;
   buttons: Record<ButtonLabel, [number] | [number, ChildProcess]>;
   buttonColors: Record<ButtonLabel, string>;
   buttonTimeouts: Record<ButtonLabel, TimeoutFuncPair>;
@@ -659,6 +659,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     pluginStreams,
     shiftPressed: false,
     rofiOpen: false,
+    ledSaveStates: {},
     buttons: {},
     buttonColors: {},
     buttonTimeouts: {},

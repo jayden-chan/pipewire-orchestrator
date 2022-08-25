@@ -2,6 +2,60 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false,
     "definitions": {
+        "ActionBinding": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/CommandBinding",
+                    "description": "Execute a shell command when the binding is activated"
+                },
+                {
+                    "$ref": "#/definitions/RangeBinding",
+                    "description": "Change the range of a dial when the binding is executed"
+                },
+                {
+                    "$ref": "#/definitions/MidiBinding",
+                    "description": "Emit a MIDI event when the binding is activated"
+                },
+                {
+                    "$ref": "#/definitions/ToggleMuteBinding",
+                    "description": "Turn on or off mute for the given dial"
+                },
+                {
+                    "$ref": "#/definitions/LV2ShowGUIBinding"
+                },
+                {
+                    "$ref": "#/definitions/LV2LoadPresetBinding"
+                },
+                {
+                    "$ref": "#/definitions/MixerSelectBinding",
+                    "description": "Open the selection prompt to assign an application\nto a mixer channel"
+                },
+                {
+                    "$ref": "#/definitions/PipewireLinkBinding",
+                    "description": "Create a link between two nodes and ports within PipeWire"
+                },
+                {
+                    "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                    "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
+                },
+                {
+                    "$ref": "#/definitions/PipewireUnLinkBinding",
+                    "description": "Destroy a link between two nodes and ports within PipeWire"
+                },
+                {
+                    "$ref": "#/definitions/LEDSetBinding",
+                    "description": "Set the given button LED to the given color"
+                },
+                {
+                    "$ref": "#/definitions/LEDSaveBinding",
+                    "description": "Save the LED state of the given button"
+                },
+                {
+                    "$ref": "#/definitions/LEDRestoreBinding",
+                    "description": "Restore the previously saved LED state of the\ngiven button"
+                }
+            ]
+        },
         "ActionBinding_1": {
             "anyOf": [
                 {
@@ -43,7 +97,16 @@
                     "description": "Destroy a link between two nodes and ports within PipeWire"
                 },
                 {
-                    "$ref": "#/definitions/LEDSetBinding"
+                    "$ref": "#/definitions/LEDSetBinding",
+                    "description": "Set the given button LED to the given color"
+                },
+                {
+                    "$ref": "#/definitions/LEDSaveBinding",
+                    "description": "Save the LED state of the given button"
+                },
+                {
+                    "$ref": "#/definitions/LEDRestoreBinding",
+                    "description": "Restore the previously saved LED state of the\ngiven button"
                 }
             ]
         },
@@ -54,7 +117,7 @@
             "$ref": "#/definitions/__type_2"
         },
         "CancelBinding": {
-            "$ref": "#/definitions/__type_24"
+            "$ref": "#/definitions/__type_26"
         },
         "CommandBinding": {
             "$ref": "#/definitions/__type_4"
@@ -68,6 +131,12 @@
         },
         "KeyEventAction_1": {
             "$ref": "#/definitions/__type_3"
+        },
+        "LEDRestoreBinding": {
+            "$ref": "#/definitions/__type_25"
+        },
+        "LEDSaveBinding": {
+            "$ref": "#/definitions/__type_24"
         },
         "LEDSetBinding": {
             "$ref": "#/definitions/__type_23"
@@ -83,7 +152,7 @@
             "description": "Action(s) to execute on long press"
         },
         "LongPressAction_1": {
-            "$ref": "#/definitions/__type_25"
+            "$ref": "#/definitions/__type_27"
         },
         "MapFunction": {
             "enum": [
@@ -336,49 +405,7 @@
                         "properties": {
                             "actions": {
                                 "items": {
-                                    "anyOf": [
-                                        {
-                                            "$ref": "#/definitions/CommandBinding",
-                                            "description": "Execute a shell command when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/RangeBinding",
-                                            "description": "Change the range of a dial when the binding is executed"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MidiBinding",
-                                            "description": "Emit a MIDI event when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Turn on or off mute for the given dial"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2ShowGUIBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2LoadPresetBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MixerSelectBinding",
-                                            "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireLinkBinding",
-                                            "description": "Create a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireUnLinkBinding",
-                                            "description": "Destroy a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LEDSetBinding"
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/ActionBinding"
                                 },
                                 "type": "array"
                             },
@@ -479,8 +506,11 @@
                 "channel": {
                     "type": "number"
                 },
-                "pendingColor": {
-                    "type": "string"
+                "onFinish": {
+                    "items": {
+                        "$ref": "#/definitions/ActionBinding"
+                    },
+                    "type": "array"
                 },
                 "type": {
                     "enum": [
@@ -615,6 +645,7 @@
         },
         "__type_23": {
             "additionalProperties": false,
+            "description": "Set the given button LED to the given color",
             "properties": {
                 "button": {
                     "type": "string"
@@ -638,6 +669,46 @@
         },
         "__type_24": {
             "additionalProperties": false,
+            "description": "Save the LED state of the given button",
+            "properties": {
+                "button": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "led::save"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "button",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_25": {
+            "additionalProperties": false,
+            "description": "Restore the previously saved LED state of the\ngiven button",
+            "properties": {
+                "button": {
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "led::restore"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "button",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_26": {
+            "additionalProperties": false,
             "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)",
             "properties": {
                 "alt": {
@@ -655,7 +726,7 @@
             ],
             "type": "object"
         },
-        "__type_25": {
+        "__type_27": {
             "additionalProperties": false,
             "description": "Action(s) to execute on long press",
             "properties": {
@@ -709,7 +780,16 @@
                                 "description": "Destroy a link between two nodes and ports within PipeWire"
                             },
                             {
-                                "$ref": "#/definitions/LEDSetBinding"
+                                "$ref": "#/definitions/LEDSetBinding",
+                                "description": "Set the given button LED to the given color"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDSaveBinding",
+                                "description": "Save the LED state of the given button"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDRestoreBinding",
+                                "description": "Restore the previously saved LED state of the\ngiven button"
                             }
                         ]
                     },
@@ -782,7 +862,16 @@
                                 "description": "Destroy a link between two nodes and ports within PipeWire"
                             },
                             {
-                                "$ref": "#/definitions/LEDSetBinding"
+                                "$ref": "#/definitions/LEDSetBinding",
+                                "description": "Set the given button LED to the given color"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDSaveBinding",
+                                "description": "Save the LED state of the given button"
+                            },
+                            {
+                                "$ref": "#/definitions/LEDRestoreBinding",
+                                "description": "Restore the previously saved LED state of the\ngiven button"
                             }
                         ]
                     },
@@ -1043,97 +1132,13 @@
                             },
                             "onConnect": {
                                 "items": {
-                                    "anyOf": [
-                                        {
-                                            "$ref": "#/definitions/CommandBinding",
-                                            "description": "Execute a shell command when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/RangeBinding",
-                                            "description": "Change the range of a dial when the binding is executed"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MidiBinding",
-                                            "description": "Emit a MIDI event when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Turn on or off mute for the given dial"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2ShowGUIBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2LoadPresetBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MixerSelectBinding",
-                                            "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireLinkBinding",
-                                            "description": "Create a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireUnLinkBinding",
-                                            "description": "Destroy a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LEDSetBinding"
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/ActionBinding"
                                 },
                                 "type": "array"
                             },
                             "onDisconnect": {
                                 "items": {
-                                    "anyOf": [
-                                        {
-                                            "$ref": "#/definitions/CommandBinding",
-                                            "description": "Execute a shell command when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/RangeBinding",
-                                            "description": "Change the range of a dial when the binding is executed"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MidiBinding",
-                                            "description": "Emit a MIDI event when the binding is activated"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/ToggleMuteBinding",
-                                            "description": "Turn on or off mute for the given dial"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2ShowGUIBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LV2LoadPresetBinding"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/MixerSelectBinding",
-                                            "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireLinkBinding",
-                                            "description": "Create a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                            "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                                        },
-                                        {
-                                            "$ref": "#/definitions/PipewireUnLinkBinding",
-                                            "description": "Destroy a link between two nodes and ports within PipeWire"
-                                        },
-                                        {
-                                            "$ref": "#/definitions/LEDSetBinding"
-                                        }
-                                    ]
+                                    "$ref": "#/definitions/ActionBinding"
                                 },
                                 "type": "array"
                             }

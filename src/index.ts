@@ -1,13 +1,7 @@
 import { daemonCommand } from "./commands/daemon";
-import { swapAmps } from "./commands/swap_amps";
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd === undefined) {
-    console.error(`Specify a command: "daemon", or "swap_amps"`);
-    return;
-  }
-
   if (cmd === "daemon") {
     const device = process.argv[3];
     if (device === undefined) {
@@ -19,12 +13,7 @@ async function main() {
     process.exit(exitCode);
   }
 
-  if (cmd === "swap_amps") {
-    await swapAmps();
-    return;
-  }
-
-  console.error(`Invalid command: "${cmd}". Options: "daemon", or "swap_amps"`);
+  console.error(`Specify a valid command. Options: "daemon"`);
 }
 
 main();

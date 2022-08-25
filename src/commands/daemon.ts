@@ -13,7 +13,6 @@ import { jalv } from "../jalv";
 import { debug, error, log, warn } from "../logger";
 import {
   amidiSend,
-  ByteTriplet,
   MidiEvent,
   MidiEventControlChange,
   MidiEventNoteOff,
@@ -199,37 +198,14 @@ async function doActionBinding(
   }
 
   if (binding.type === "range") {
-    if (context.ranges[binding.dial] === undefined) {
-      const initialMode = binding.modes[0];
-      context.ranges[binding.dial] = {
-        range: initialMode.range,
-        idx: 0,
-      };
-    }
-
-    const newIdx =
-      (context.ranges[binding.dial].idx + 1) % binding.modes.length;
-    const newMode = binding.modes[newIdx];
-    context.ranges[binding.dial] = {
-      range: newMode.range,
-      idx: newIdx,
-    };
-
+    context.ranges[binding.dial] = binding.range;
     // update the dial value immediately so we don't get a jump
     // in volume the next time the dial is moved
-    manifestDialValue(binding.dial, context.dials[binding.dial] ?? 0, context);
-
-    const data =
-      button &&
-      buttonLEDBytes(
-        button,
-        newMode.color,
-        button.channel,
-        button.note,
-        context
-      );
-
-    return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
+    return manifestDialValue(
+      binding.dial,
+      context.dials[binding.dial] ?? 0,
+      context
+    );
   }
 }
 
@@ -582,7 +558,6 @@ function handleMixerRule(
   });
 }
 
-type RangeStates = Record<string, { range: Range; idx: number }>;
 type PluginName = string;
 type ButtonLabel = string;
 type DialLabel = string;
@@ -595,7 +570,7 @@ export type WatchCmdContext = {
   pluginStreams: Record<PluginName, Readable>;
   shiftPressed: ShiftPressed;
   rofiOpen: boolean;
-  ranges: RangeStates;
+  ranges: Record<string, Range>;
   mutes: Record<DialLabel, boolean>;
   dials: Record<DialLabel, number>;
   buttons: Record<ButtonLabel, [number] | [number, ChildProcess]>;

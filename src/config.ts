@@ -7,11 +7,6 @@ import { NodeAndPort } from "./pipewire";
 
 export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT" | "TAPER";
 
-export type DialRange = {
-  range: Range;
-  color: string;
-};
-
 /**
  * Execute a shell command when the binding is activated
  */
@@ -38,7 +33,7 @@ export type PassthroughBinding = {
 export type RangeBinding = {
   type: "range";
   dial: string;
-  modes: DialRange[];
+  range: Range;
 };
 
 /**

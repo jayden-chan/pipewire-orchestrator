@@ -827,24 +827,8 @@
                 "dial": {
                     "type": "string"
                 },
-                "modes": {
-                    "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                            "color": {
-                                "type": "string"
-                            },
-                            "range": {
-                                "$ref": "#/definitions/Range"
-                            }
-                        },
-                        "required": [
-                            "color",
-                            "range"
-                        ],
-                        "type": "object"
-                    },
-                    "type": "array"
+                "range": {
+                    "$ref": "#/definitions/Range"
                 },
                 "type": {
                     "enum": [
@@ -855,7 +839,7 @@
             },
             "required": [
                 "dial",
-                "modes",
+                "range",
                 "type"
             ],
             "type": "object"

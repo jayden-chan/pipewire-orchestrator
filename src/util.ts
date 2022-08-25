@@ -47,7 +47,7 @@ export function computeMappedVal(
 ): number {
   let pct = input / (dial.range[1] - dial.range[0]);
   if (context.ranges[dial.label] !== undefined) {
-    const [start, end] = context.ranges[dial.label].range;
+    const [start, end] = context.ranges[dial.label];
     pct = pct * (end - start) + start;
   }
 
@@ -256,11 +256,7 @@ export function defaultLEDStates(
       let color = "OFF";
       switch (binding.type) {
         case "command":
-        case "mute":
           color = "ON";
-          break;
-        case "range":
-          color = binding.modes[0].color;
           break;
         case "cycle":
           color = binding.items[0].color ?? "OFF";

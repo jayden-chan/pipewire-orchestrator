@@ -13,6 +13,7 @@ export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT" | "TAPER";
 export type CommandBinding = {
   type: "command";
   command: string;
+  onFinish?: ActionBinding[];
   cancelable?: boolean;
 };
 
@@ -164,13 +165,10 @@ export type ActionBinding =
   | LEDSetBinding
   | LEDSaveBinding
   | LEDRestoreBinding
+  | CancelBinding
   | MixerSelectBinding;
 
-export type ButtonBindAction =
-  | CancelBinding
-  | RangeBinding
-  | CycleBinding
-  | ActionBinding;
+export type ButtonBindAction = CycleBinding | ActionBinding;
 
 /**
  * Actions(s) to execute on a key event such as a key

@@ -123,7 +123,7 @@
             "$ref": "#/definitions/__type_4"
         },
         "CycleBinding": {
-            "$ref": "#/definitions/__type_14"
+            "$ref": "#/definitions/__type_25"
         },
         "KeyEventAction": {
             "$ref": "#/definitions/KeyEventAction_1",
@@ -133,19 +133,19 @@
             "$ref": "#/definitions/__type_3"
         },
         "LEDRestoreBinding": {
-            "$ref": "#/definitions/__type_25"
-        },
-        "LEDSaveBinding": {
             "$ref": "#/definitions/__type_24"
         },
-        "LEDSetBinding": {
+        "LEDSaveBinding": {
             "$ref": "#/definitions/__type_23"
         },
+        "LEDSetBinding": {
+            "$ref": "#/definitions/__type_22"
+        },
         "LV2LoadPresetBinding": {
-            "$ref": "#/definitions/__type_17"
+            "$ref": "#/definitions/__type_16"
         },
         "LV2ShowGUIBinding": {
-            "$ref": "#/definitions/__type_16"
+            "$ref": "#/definitions/__type_15"
         },
         "LongPressAction": {
             "$ref": "#/definitions/LongPressAction_1",
@@ -230,22 +230,22 @@
             "type": "string"
         },
         "MixerSelectBinding": {
-            "$ref": "#/definitions/__type_18"
+            "$ref": "#/definitions/__type_17"
         },
         "NodeAndPort": {
-            "$ref": "#/definitions/__type_20"
+            "$ref": "#/definitions/__type_19"
         },
         "PassthroughBinding": {
             "$ref": "#/definitions/__type_1"
         },
         "PipewireExclusiveLinkBinding": {
-            "$ref": "#/definitions/__type_21"
+            "$ref": "#/definitions/__type_20"
         },
         "PipewireLinkBinding": {
-            "$ref": "#/definitions/__type_19"
+            "$ref": "#/definitions/__type_18"
         },
         "PipewireUnLinkBinding": {
-            "$ref": "#/definitions/__type_22"
+            "$ref": "#/definitions/__type_21"
         },
         "Range": {
             "items": [
@@ -264,7 +264,7 @@
             "$ref": "#/definitions/__type_5"
         },
         "ToggleMuteBinding": {
-            "$ref": "#/definitions/__type_15"
+            "$ref": "#/definitions/__type_14"
         },
         "__type": {
             "additionalProperties": {
@@ -397,44 +397,6 @@
         },
         "__type_14": {
             "additionalProperties": false,
-            "description": "Cycle through the given sub-bindings each time the binding\nis activated",
-            "properties": {
-                "items": {
-                    "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                            "actions": {
-                                "items": {
-                                    "$ref": "#/definitions/ActionBinding"
-                                },
-                                "type": "array"
-                            },
-                            "color": {
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "actions"
-                        ],
-                        "type": "object"
-                    },
-                    "type": "array"
-                },
-                "type": {
-                    "enum": [
-                        "cycle"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "items",
-                "type"
-            ],
-            "type": "object"
-        },
-        "__type_15": {
-            "additionalProperties": false,
             "description": "Turn on or off mute for the given dial",
             "properties": {
                 "dial": {
@@ -457,7 +419,7 @@
             ],
             "type": "object"
         },
-        "__type_16": {
+        "__type_15": {
             "additionalProperties": false,
             "properties": {
                 "pluginName": {
@@ -476,7 +438,7 @@
             ],
             "type": "object"
         },
-        "__type_17": {
+        "__type_16": {
             "additionalProperties": false,
             "properties": {
                 "pluginName": {
@@ -499,7 +461,7 @@
             ],
             "type": "object"
         },
-        "__type_18": {
+        "__type_17": {
             "additionalProperties": false,
             "description": "Open the selection prompt to assign an application\nto a mixer channel",
             "properties": {
@@ -525,7 +487,7 @@
             ],
             "type": "object"
         },
-        "__type_19": {
+        "__type_18": {
             "additionalProperties": false,
             "description": "Create a link between two nodes and ports within PipeWire",
             "properties": {
@@ -546,6 +508,22 @@
                 "dest",
                 "src",
                 "type"
+            ],
+            "type": "object"
+        },
+        "__type_19": {
+            "additionalProperties": false,
+            "properties": {
+                "node": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "node",
+                "port"
             ],
             "type": "object"
         },
@@ -581,22 +559,6 @@
         },
         "__type_20": {
             "additionalProperties": false,
-            "properties": {
-                "node": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "node",
-                "port"
-            ],
-            "type": "object"
-        },
-        "__type_21": {
-            "additionalProperties": false,
             "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
             "properties": {
                 "dest": {
@@ -619,7 +581,7 @@
             ],
             "type": "object"
         },
-        "__type_22": {
+        "__type_21": {
             "additionalProperties": false,
             "description": "Destroy a link between two nodes and ports within PipeWire",
             "properties": {
@@ -643,7 +605,7 @@
             ],
             "type": "object"
         },
-        "__type_23": {
+        "__type_22": {
             "additionalProperties": false,
             "description": "Set the given button LED to the given color",
             "properties": {
@@ -667,7 +629,7 @@
             ],
             "type": "object"
         },
-        "__type_24": {
+        "__type_23": {
             "additionalProperties": false,
             "description": "Save the LED state of the given button",
             "properties": {
@@ -687,7 +649,7 @@
             ],
             "type": "object"
         },
-        "__type_25": {
+        "__type_24": {
             "additionalProperties": false,
             "description": "Restore the previously saved LED state of the\ngiven button",
             "properties": {
@@ -703,6 +665,44 @@
             },
             "required": [
                 "button",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_25": {
+            "additionalProperties": false,
+            "description": "Cycle through the given sub-bindings each time the binding\nis activated",
+            "properties": {
+                "items": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "actions": {
+                                "items": {
+                                    "$ref": "#/definitions/ActionBinding"
+                                },
+                                "type": "array"
+                            },
+                            "color": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "actions"
+                        ],
+                        "type": "object"
+                    },
+                    "type": "array"
+                },
+                "type": {
+                    "enum": [
+                        "cycle"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "items",
                 "type"
             ],
             "type": "object"
@@ -895,6 +895,12 @@
                 },
                 "command": {
                     "type": "string"
+                },
+                "onFinish": {
+                    "items": {
+                        "$ref": "#/definitions/ActionBinding"
+                    },
+                    "type": "array"
                 },
                 "type": {
                     "enum": [

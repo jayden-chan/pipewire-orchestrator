@@ -70,6 +70,13 @@ async function doActionBinding(
         .catch((err) => {
           error("[run-command]", err);
         });
+    case "cancel":
+      if (context.rofiOpen) {
+        run("xdotool key Escape").catch((err) => error(err));
+      } else if (binding.alt !== undefined) {
+        return doActionBinding(binding.alt, context);
+      }
+      return;
     case "midi":
       context.midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
       return;
@@ -296,54 +303,21 @@ async function handleButtonBinding(
   event: MidiEventNoteOn | MidiEventNoteOff,
   context: WatchCmdContext
 ) {
-  if (binding.type === "cancel") {
-    if (context.rofiOpen) {
-      run("xdotool key Escape").catch((err) => error(err));
-    } else if (binding.alt !== undefined) {
-      return doActionBinding(binding.alt, context);
-    }
-    return;
-  }
-
   if (binding.type === "command") {
-    if (context.buttons[button.label] === undefined) {
-      const runningState = Object.entries(button.ledStates ?? {}).find(
-        // TODO: stop hard coding this
-        ([state]) => state === "AMBER"
-      );
-
-      const data = buttonLEDBytes(
-        button,
-        (runningState ?? ["OFF"])[0],
-        event.channel,
-        event.note,
-        context
-      );
-
-      amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
-    }
-
     const onFinished = (timestamp: number) => {
       delete context.buttons[button.label];
 
       setTimeout(
         () => {
-          const onState = Object.entries(button.ledStates ?? {}).find(
-            ([state]) => state === "ON" || state === "GREEN"
+          (binding.onFinish ?? []).forEach((action) =>
+            doActionBinding(action, context).catch((err) =>
+              error(
+                `[command::onFinish]`,
+                `Error ocurred in command onFinish function: `,
+                err
+              )
+            )
           );
-
-          if (onState !== undefined) {
-            const data = buttonLEDBytes(
-              button,
-              onState[0],
-              event.channel,
-              event.note,
-              context
-            );
-            amidiSend(context.config.outputMidi, [data]).catch(
-              handleAmidiError
-            );
-          }
         },
         new Date().valueOf() - timestamp < 150 ? 150 : 0
       );

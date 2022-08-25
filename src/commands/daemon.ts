@@ -1,11 +1,6 @@
 import { ChildProcess, exec } from "child_process";
 import { Readable } from "stream";
-import {
-  ActionBinding,
-  ButtonBindAction,
-  readConfig,
-  RuntimeConfig,
-} from "../config";
+import { Action, readConfig, RuntimeConfig } from "../config";
 import { Button, Device, Dial, Range } from "../devices";
 import { apcKey25 } from "../devices/apcKey25";
 import { handleAmidiError, handlePwLinkError } from "../errors";
@@ -42,10 +37,12 @@ import {
   freeMixerPorts,
   isAssignedToMixer,
   manifestDialValue,
+  objectId,
   run,
 } from "../util";
 
 const UPDATE_HOOK_TIMEOUT_MS = 150;
+const DEFAULT_LONG_PRESS_TIMEOUT_MS = 500;
 const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
 };
@@ -60,16 +57,10 @@ const findDial = (event: MidiEventControlChange) => {
 };
 
 async function doActionBinding(
-  binding: ActionBinding,
-  context: WatchCmdContext
+  binding: Action,
+  context: DaemonContext
 ): Promise<void> {
   switch (binding.type) {
-    case "command":
-      return run(binding.command)
-        .then(() => Promise.resolve())
-        .catch((err) => {
-          error("[run-command]", err);
-        });
     case "cancel":
       if (context.rofiOpen) {
         run("xdotool key Escape").catch((err) => error(err));
@@ -85,11 +76,6 @@ async function doActionBinding(
         context.pluginStreams[binding.pluginName].push(
           `preset ${binding.preset}`
         );
-      }
-      return;
-    case "lv2::show_gui":
-      if (context.pluginStreams[binding.pluginName] !== undefined) {
-        context.pluginStreams[binding.pluginName].push("show");
       }
       return;
     case "pipewire::link":
@@ -123,6 +109,19 @@ async function doActionBinding(
       context.ledSaveStates[binding.button] =
         context.buttonColors[binding.button];
       return;
+  }
+
+  if (binding.type === "cycle") {
+    const id = await objectId(binding);
+    context.cycleStates[id] =
+      ((context.cycleStates[id] ?? 0) + 1) % binding.actions.length;
+
+    const newBind = binding.actions[context.cycleStates[id]];
+    return Promise.all(
+      newBind.map((bind) => {
+        return doActionBinding(bind, context);
+      })
+    ).then(() => Promise.resolve());
   }
 
   if (binding.type === "mute") {
@@ -161,6 +160,64 @@ async function doActionBinding(
       context
     );
     return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
+  }
+
+  if (binding.type === "command") {
+    const id = await objectId(binding);
+    const onFinished = (timestamp: number) => {
+      delete context.commandStates[id];
+
+      setTimeout(
+        () => {
+          (binding.onFinish ?? []).forEach((action) =>
+            doActionBinding(action, context).catch((err) =>
+              error(
+                `[command::onFinish]`,
+                `Error ocurred in command onFinish function: `,
+                err
+              )
+            )
+          );
+        },
+        new Date().valueOf() - timestamp < 150 ? 150 : 0
+      );
+    };
+
+    if (
+      binding.cancelable === true &&
+      context.commandStates[id] !== undefined
+    ) {
+      const [timestamp, process] = context.commandStates[id];
+      if (process !== undefined) {
+        process.kill();
+      }
+      onFinished(timestamp);
+      return;
+    }
+
+    const timestamp = new Date().valueOf();
+    const childProcess = exec(binding.command, (err) => {
+      const commandState = context.commandStates[id];
+      // command has already been killed, no need to run
+      // the callback
+      if (commandState === undefined) {
+        return;
+      }
+
+      if (err) {
+        error(`[cmd-exec]`, err);
+      }
+
+      // if another instance of the command is running concurrently as well,
+      // we shouldn't run the onFinished function
+      if (commandState[0] !== timestamp) {
+        return;
+      }
+      onFinished(timestamp);
+    });
+
+    context.commandStates[id] = [timestamp, childProcess];
+    return;
   }
 
   if (binding.type == "mixer::select") {
@@ -212,7 +269,7 @@ async function doActionBinding(
 
 async function handleNoteOn(
   event: MidiEventNoteOn,
-  context: WatchCmdContext
+  context: DaemonContext
 ): Promise<void> {
   if (event.channel === context.config.device.keys.channel) {
     debug(`Key ON ${event.note} velocity ${event.velocity}`);
@@ -239,15 +296,13 @@ async function handleNoteOn(
     return;
   }
 
-  const executionFunc = (actions: ButtonBindAction[], color?: string) => {
+  const executionFunc = (actions: Action[], color?: string) => {
     return () => {
       amidiSend(context.config.outputMidi, [
         buttonLEDBytes(button, color, button.channel, button.note, context),
       ]);
 
-      Promise.all(
-        actions.map((bind) => handleButtonBinding(bind, button, event, context))
-      )
+      Promise.all(actions.map((bind) => doActionBinding(bind, context)))
         .then(() => Promise.resolve())
         .catch((err) => error(`[button-executor]`, err));
     };
@@ -255,8 +310,9 @@ async function handleNoteOn(
 
   if (context.shiftPressed) {
     if (binding.onShiftLongPress !== undefined) {
-      const { color, actions, timeout } = binding.onShiftLongPress;
-      const longPressFunc = executionFunc(actions, color);
+      const { actions, timeout: bindTimeout } = binding.onShiftLongPress;
+      const timeout = bindTimeout ?? DEFAULT_LONG_PRESS_TIMEOUT_MS;
+      const longPressFunc = executionFunc(actions);
       const to: TimeoutFuncPair = [
         setTimeout(() => {
           longPressFunc();
@@ -265,20 +321,18 @@ async function handleNoteOn(
         undefined,
       ];
       if (binding.onShiftPress !== undefined) {
-        to[1] = executionFunc(
-          binding.onShiftPress.actions,
-          binding.onShiftPress.color
-        );
+        to[1] = executionFunc(binding.onShiftPress.actions);
       }
 
       context.buttonTimeouts[button.label] = to;
     } else if (binding.onShiftPress !== undefined) {
-      executionFunc(binding.onShiftPress.actions, binding.onShiftPress.color)();
+      executionFunc(binding.onShiftPress.actions)();
     }
   } else {
     if (binding.onLongPress !== undefined) {
-      const { color, actions, timeout } = binding.onLongPress;
-      const longPressFunc = executionFunc(actions, color);
+      const { actions, timeout: bindTimeout } = binding.onLongPress;
+      const timeout = bindTimeout ?? DEFAULT_LONG_PRESS_TIMEOUT_MS;
+      const longPressFunc = executionFunc(actions);
       const to: TimeoutFuncPair = [
         setTimeout(() => {
           longPressFunc();
@@ -287,109 +341,17 @@ async function handleNoteOn(
         undefined,
       ];
       if (binding.onPress !== undefined) {
-        to[1] = executionFunc(binding.onPress.actions, binding.onPress.color);
+        to[1] = executionFunc(binding.onPress.actions);
       }
 
       context.buttonTimeouts[button.label] = to;
     } else if (binding.onPress !== undefined) {
-      executionFunc(binding.onPress.actions, binding.onPress.color)();
+      executionFunc(binding.onPress.actions)();
     }
   }
 }
 
-async function handleButtonBinding(
-  binding: ButtonBindAction,
-  button: Button,
-  event: MidiEventNoteOn | MidiEventNoteOff,
-  context: WatchCmdContext
-) {
-  if (binding.type === "command") {
-    const onFinished = (timestamp: number) => {
-      delete context.buttons[button.label];
-
-      setTimeout(
-        () => {
-          (binding.onFinish ?? []).forEach((action) =>
-            doActionBinding(action, context).catch((err) =>
-              error(
-                `[command::onFinish]`,
-                `Error ocurred in command onFinish function: `,
-                err
-              )
-            )
-          );
-        },
-        new Date().valueOf() - timestamp < 150 ? 150 : 0
-      );
-    };
-
-    if (
-      binding.cancelable === true &&
-      context.buttons[button.label] !== undefined
-    ) {
-      const [timestamp, process] = context.buttons[button.label];
-      if (process !== undefined) {
-        process.kill();
-      }
-      onFinished(timestamp);
-      return;
-    }
-
-    const timestamp = new Date().valueOf();
-    const childProcess = exec(binding.command, (err) => {
-      const buttonContext = context.buttons[button.label];
-      // command has already been killed, no need to run
-      // the callback
-      if (buttonContext === undefined) {
-        return;
-      }
-
-      if (err) {
-        error(`[cmd-exec]`, err);
-      }
-
-      // if another instance of the command is running concurrently as well,
-      // we shouldn't run the onFinished function
-      if (buttonContext[0] !== timestamp) {
-        return;
-      }
-      onFinished(timestamp);
-    });
-
-    context.buttons[button.label] = [timestamp, childProcess];
-    return;
-  }
-
-  if (binding.type === "cycle") {
-    if (context.buttons[button.label] === undefined) {
-      context.buttons[button.label] = [1];
-    } else {
-      context.buttons[button.label] = [
-        (context.buttons[button.label][0] + 1) % binding.items.length,
-      ];
-    }
-
-    const newBind = binding.items[context.buttons[button.label][0]];
-    const data = buttonLEDBytes(
-      button,
-      newBind.color,
-      event.channel,
-      event.note,
-      context
-    );
-
-    amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
-    return Promise.all(
-      newBind.actions.map((bind) => {
-        return doActionBinding(bind, context);
-      })
-    ).then(() => Promise.resolve());
-  }
-
-  return doActionBinding(binding, context);
-}
-
-function handleNoteOff(event: MidiEventNoteOff, context: WatchCmdContext) {
+function handleNoteOff(event: MidiEventNoteOff, context: DaemonContext) {
   if (event.channel === context.config.device.keys.channel) {
     debug(`Key OFF ${event.note} velocity ${event.velocity}`);
     return;
@@ -422,27 +384,15 @@ function handleNoteOff(event: MidiEventNoteOff, context: WatchCmdContext) {
   }
 
   if (binding.onRelease !== undefined) {
-    amidiSend(context.config.outputMidi, [
-      buttonLEDBytes(
-        button,
-        binding.onRelease.color,
-        button.channel,
-        button.note,
-        context
-      ),
-    ]);
-
     return Promise.all(
-      binding.onRelease.actions.map((bind) =>
-        handleButtonBinding(bind, button, event, context)
-      )
+      binding.onRelease.actions.map((bind) => doActionBinding(bind, context))
     ).then(() => Promise.resolve());
   }
 }
 
 function handleControlChange(
   event: MidiEventControlChange,
-  context: WatchCmdContext
+  context: DaemonContext
 ) {
   // shift key disables dials. useful for changing
   // dial ranges without having skips in output
@@ -461,7 +411,7 @@ function handleControlChange(
 function handleMixerRule(
   nodeName: string,
   channel: number | "round_robin",
-  context: WatchCmdContext
+  context: DaemonContext
 ) {
   const appsToConnect = audioClients(context.pipewire.state).filter((source) =>
     findPwNode(nodeName)(source.node)
@@ -530,9 +480,11 @@ type PluginName = string;
 type ButtonLabel = string;
 type DialLabel = string;
 type ShiftPressed = boolean;
+type Timestamp = number;
+type ID = string;
 type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
 
-export type WatchCmdContext = {
+export type DaemonContext = {
   config: RuntimeConfig;
   midishIn: Readable;
   pluginStreams: Record<PluginName, Readable>;
@@ -542,7 +494,8 @@ export type WatchCmdContext = {
   mutes: Record<DialLabel, boolean>;
   dials: Record<DialLabel, number>;
   ledSaveStates: Record<ButtonLabel, string>;
-  buttons: Record<ButtonLabel, [number] | [number, ChildProcess]>;
+  commandStates: Record<ID, [Timestamp, ChildProcess]>;
+  cycleStates: Record<ID, number>;
   buttonColors: Record<ButtonLabel, string>;
   buttonTimeouts: Record<ButtonLabel, TimeoutFuncPair>;
   pipewire: {
@@ -602,17 +555,14 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     device,
     outputMidi: outputPort,
   };
-  const onConnectRules: Array<[string, ActionBinding[]]> = config.pipewire.rules
-    .filter((rule) => rule.onConnect !== undefined)
-    .map((rule) => [rule.node, rule.onConnect]) as [string, ActionBinding[]][];
 
-  const onDisconnectRules: Array<[string, ActionBinding[]]> =
-    config.pipewire.rules
-      .filter((rule) => rule.onDisconnect !== undefined)
-      .map((rule) => [rule.node, rule.onDisconnect]) as [
-      string,
-      ActionBinding[]
-    ][];
+  const onConnectRules: Array<[string, Action[]]> = config.pipewire.rules
+    .filter((rule) => rule.onConnect !== undefined)
+    .map((rule) => [rule.node, rule.onConnect]) as [string, Action[]][];
+
+  const onDisconnectRules: Array<[string, Action[]]> = config.pipewire.rules
+    .filter((rule) => rule.onDisconnect !== undefined)
+    .map((rule) => [rule.node, rule.onDisconnect]) as [string, Action[]][];
 
   const mixerRules: Array<[string, number | "round_robin"]> =
     config.pipewire.rules
@@ -622,17 +572,20 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
       number | "round_robin"
     ][];
 
-  const context: WatchCmdContext = {
+  const context: DaemonContext = {
     config,
     midishIn,
     pluginStreams,
     shiftPressed: false,
     rofiOpen: false,
     ledSaveStates: {},
-    buttons: {},
+    commandStates: {},
+    cycleStates: {},
     buttonColors: {},
     buttonTimeouts: {},
     mutes: {},
+    // dials default to 50%
+    // TODO: maybe make this a config option?
     dials: Object.fromEntries(
       device.dials.map((d) => [d.label, (d.range[1] - d.range[0]) / 2])
     ),
@@ -722,7 +675,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     await Promise.race([watchMidiPromise, pipewirePromise, midishPromise]);
     return 0;
   } catch (err) {
-    error(`Problem ocurred with midi watch: exit code ${err}`);
+    error(`Problem ocurred with daemon: exit code ${err}`);
     return 1;
   }
 }

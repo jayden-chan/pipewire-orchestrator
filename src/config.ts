@@ -10,10 +10,10 @@ export type MapFunction = "IDENTITY" | "SQUARED" | "SQRT" | "TAPER";
 /**
  * Execute a shell command when the binding is activated
  */
-export type CommandBinding = {
+export type CommandAction = {
   type: "command";
   command: string;
-  onFinish?: ActionBinding[];
+  onFinish?: Action[];
   cancelable?: boolean;
 };
 
@@ -31,7 +31,7 @@ export type PassthroughBinding = {
 /**
  * Change the range of a dial when the binding is executed
  */
-export type RangeBinding = {
+export type RangeAction = {
   type: "range";
   dial: string;
   range: Range;
@@ -40,7 +40,7 @@ export type RangeBinding = {
 /**
  * Emit a MIDI event when the binding is activated
  */
-export type MidiBinding = {
+export type MidiAction = {
   type: "midi";
   events: MidiEvent[];
 };
@@ -49,38 +49,33 @@ export type MidiBinding = {
  * Cycle through the given sub-bindings each time the binding
  * is activated
  */
-export type CycleBinding = {
+export type CycleAction = {
   type: "cycle";
-  items: {
-    actions: ActionBinding[];
-    color?: string;
-  }[];
+  actions: Action[][];
 };
 
 /**
  * Cancel any current pending action. If there is no pending action
  * then the alt binding will be executed (if specified)
  */
-export type CancelBinding = {
+export type CancelAction = {
   type: "cancel";
-  alt?: ActionBinding;
+  alt?: Action;
 };
 
 /**
  * Turn on or off mute for the given dial
  */
-export type ToggleMuteBinding = {
+export type ToggleMuteAction = {
   type: "mute";
   mute: boolean;
   dial: string;
 };
 
-export type LV2ShowGUIBinding = {
-  type: "lv2::show_gui";
-  pluginName: string;
-};
-
-export type LV2LoadPresetBinding = {
+/**
+ * Load an LV2 preset for the given plugin
+ */
+export type LV2LoadPresetAction = {
   type: "lv2::load_preset";
   pluginName: string;
   preset: string;
@@ -90,16 +85,16 @@ export type LV2LoadPresetBinding = {
  * Open the selection prompt to assign an application
  * to a mixer channel
  */
-export type MixerSelectBinding = {
+export type MixerSelectAction = {
   type: "mixer::select";
-  onFinish?: ActionBinding[];
+  onFinish?: Action[];
   channel: number;
 };
 
 /**
  * Create a link between two nodes and ports within PipeWire
  */
-export type PipewireLinkBinding = {
+export type PipewireLinkAction = {
   type: "pipewire::link";
   src: NodeAndPort;
   dest: NodeAndPort;
@@ -111,7 +106,7 @@ export type PipewireLinkBinding = {
  * destroying all other links originating from source port that aren't the newly
  * created one.
  */
-export type PipewireExclusiveLinkBinding = {
+export type PipewireExclusiveLinkAction = {
   type: "pipewire::exclusive_link";
   src: NodeAndPort;
   dest: NodeAndPort;
@@ -120,7 +115,7 @@ export type PipewireExclusiveLinkBinding = {
 /**
  * Destroy a link between two nodes and ports within PipeWire
  */
-export type PipewireUnLinkBinding = {
+export type PipewireUnLinkAction = {
   type: "pipewire::unlink";
   src: NodeAndPort;
   dest: NodeAndPort;
@@ -129,7 +124,7 @@ export type PipewireUnLinkBinding = {
 /**
  * Set the given button LED to the given color
  */
-export type LEDSetBinding = {
+export type LEDSetAction = {
   type: "led::set";
   button: string;
   color: string;
@@ -138,7 +133,7 @@ export type LEDSetBinding = {
 /**
  * Save the LED state of the given button
  */
-export type LEDSaveBinding = {
+export type LEDSaveAction = {
   type: "led::save";
   button: string;
 };
@@ -147,60 +142,47 @@ export type LEDSaveBinding = {
  * Restore the previously saved LED state of the
  * given button
  */
-export type LEDRestoreBinding = {
+export type LEDRestoreAction = {
   type: "led::restore";
   button: string;
 };
 
-export type ActionBinding =
-  | LV2ShowGUIBinding
-  | LV2LoadPresetBinding
-  | CommandBinding
-  | ToggleMuteBinding
-  | MidiBinding
-  | PipewireLinkBinding
-  | PipewireUnLinkBinding
-  | PipewireExclusiveLinkBinding
-  | RangeBinding
-  | LEDSetBinding
-  | LEDSaveBinding
-  | LEDRestoreBinding
-  | CancelBinding
-  | MixerSelectBinding;
-
-export type ButtonBindAction = CycleBinding | ActionBinding;
+export type Action =
+  | LV2LoadPresetAction
+  | CommandAction
+  | ToggleMuteAction
+  | MidiAction
+  | PipewireLinkAction
+  | PipewireUnLinkAction
+  | PipewireExclusiveLinkAction
+  | RangeAction
+  | LEDSetAction
+  | LEDSaveAction
+  | LEDRestoreAction
+  | CancelAction
+  | CycleAction
+  | MixerSelectAction;
 
 /**
  * Actions(s) to execute on a key event such as a key
  * press or release
  */
 export type KeyEventAction = {
-  actions: ButtonBindAction[];
-  color?: string;
-};
-
-// can't use a type intersection here with KeyEventAction
-// because it breaks typescript-json-schema for some reason
-
-/**
- * Action(s) to execute on long press
- */
-export type LongPressAction = {
-  actions: ButtonBindAction[];
-  color?: string;
-  timeout: number;
-};
-
-export type ButtonBinding = {
-  type: "button";
-  onPress?: KeyEventAction;
-  onLongPress?: LongPressAction;
-  onShiftPress?: KeyEventAction;
-  onShiftLongPress?: LongPressAction;
-  onRelease?: KeyEventAction;
+  actions: Action[];
+  // only used for long press
+  timeout?: number;
 };
 
 export type DialBinding = PassthroughBinding;
+export type ButtonBinding = {
+  type: "button";
+  defaultLEDState?: string;
+  onPress?: KeyEventAction;
+  onLongPress?: KeyEventAction;
+  onShiftPress?: KeyEventAction;
+  onShiftLongPress?: KeyEventAction;
+  onRelease?: KeyEventAction;
+};
 
 export type Binding = DialBinding | ButtonBinding;
 
@@ -211,13 +193,13 @@ export type Bindings = {
 
 export type NodeEventConfig = {
   node: string;
-  do: ActionBinding[];
+  do: Action[];
 };
 
 export type PipeWireNodeConfig = {
   node: string;
-  onConnect?: ActionBinding[];
-  onDisconnect?: ActionBinding[];
+  onConnect?: Action[];
+  onDisconnect?: Action[];
   mixerChannel?: number | "round_robin";
 };
 

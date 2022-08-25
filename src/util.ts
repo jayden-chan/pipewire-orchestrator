@@ -1,5 +1,6 @@
 import { exec, ExecException } from "child_process";
-import { WatchCmdContext } from "./commands/daemon";
+import { createHash } from "crypto";
+import { DaemonContext } from "./commands/daemon";
 import { Bindings, PassthroughBinding } from "./config";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
@@ -42,7 +43,7 @@ const MAP_FUNCTIONS = {
 export function computeMappedVal(
   input: number,
   dial: Dial,
-  context: WatchCmdContext,
+  context: DaemonContext,
   binding: PassthroughBinding
 ): number {
   let pct = input / (dial.range[1] - dial.range[0]);
@@ -58,7 +59,7 @@ export function computeMappedVal(
 export function manifestDialValue(
   dialName: string,
   value: number,
-  context: WatchCmdContext
+  context: DaemonContext
 ) {
   const dialBinding = Object.entries(context.config.bindings).find(
     ([dial]) => dial === dialName
@@ -212,7 +213,7 @@ export function buttonLEDBytes(
   color: string | undefined,
   channel: number,
   note: number,
-  context: WatchCmdContext
+  context: DaemonContext
 ): ByteTriplet | undefined {
   if (button.ledStates !== undefined && color !== undefined) {
     const ledState = Object.entries(button.ledStates).find(
@@ -236,38 +237,41 @@ export function buttonLEDBytes(
 
 export function defaultLEDStates(
   bindings: Bindings,
-  context: WatchCmdContext
+  context: DaemonContext
 ): ByteTriplet[] {
-  return Object.entries(bindings).flatMap(([key, buttonBind]) => {
-    const button = context.config.device.buttons.find((b) => b.label === key);
-    if (button === undefined || buttonBind.type === "passthrough") {
-      return [];
-    }
-
-    const binds = Object.values(buttonBind).flatMap((val) => {
-      if (val !== "button") {
-        return val.actions;
-      }
-      return [];
-    });
-
-    const commands: (ByteTriplet | undefined)[] = [];
-    binds.forEach((binding) => {
-      let color = "OFF";
-      switch (binding.type) {
-        case "command":
-          color = "ON";
-          break;
-        case "cycle":
-          color = binding.items[0].color ?? "OFF";
-          break;
+  return Object.entries(bindings)
+    .map(([key, binding]) => {
+      const button = context.config.device.buttons.find((b) => b.label === key);
+      if (button === undefined || binding.type !== "button") {
+        return undefined;
       }
 
-      commands.push(
-        buttonLEDBytes(button, color, button.channel, button.note, context)
+      return buttonLEDBytes(
+        button,
+        binding.defaultLEDState ?? "OFF",
+        button.channel,
+        button.note,
+        context
       );
+    })
+    .filter((bytes) => bytes !== undefined) as ByteTriplet[];
+}
+
+export async function objectId(obj: Record<string, any>): Promise<string> {
+  const hash = createHash("sha256");
+  return new Promise((resolve, reject) => {
+    hash.on("readable", () => {
+      // Only one element is going to be produced by the
+      // hash stream.
+      const data = hash.read();
+      if (data) {
+        resolve(data.toString("hex"));
+      } else {
+        reject(new Error("Failed to get data from hash"));
+      }
     });
 
-    return commands.filter((state) => state !== undefined) as ByteTriplet[];
+    hash.write(JSON.stringify(obj));
+    hash.end();
   });
 }

@@ -2,110 +2,122 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false,
     "definitions": {
-        "ActionBinding": {
+        "Action": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/CommandBinding",
+                    "$ref": "#/definitions/CommandAction",
                     "description": "Execute a shell command when the binding is activated"
                 },
                 {
-                    "$ref": "#/definitions/RangeBinding",
+                    "$ref": "#/definitions/RangeAction",
                     "description": "Change the range of a dial when the binding is executed"
                 },
                 {
-                    "$ref": "#/definitions/MidiBinding",
+                    "$ref": "#/definitions/MidiAction",
                     "description": "Emit a MIDI event when the binding is activated"
                 },
                 {
-                    "$ref": "#/definitions/ToggleMuteBinding",
+                    "$ref": "#/definitions/CycleAction",
+                    "description": "Cycle through the given sub-bindings each time the binding\nis activated"
+                },
+                {
+                    "$ref": "#/definitions/CancelAction",
+                    "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)"
+                },
+                {
+                    "$ref": "#/definitions/ToggleMuteAction",
                     "description": "Turn on or off mute for the given dial"
                 },
                 {
-                    "$ref": "#/definitions/LV2ShowGUIBinding"
+                    "$ref": "#/definitions/LV2LoadPresetAction",
+                    "description": "Load an LV2 preset for the given plugin"
                 },
                 {
-                    "$ref": "#/definitions/LV2LoadPresetBinding"
-                },
-                {
-                    "$ref": "#/definitions/MixerSelectBinding",
+                    "$ref": "#/definitions/MixerSelectAction",
                     "description": "Open the selection prompt to assign an application\nto a mixer channel"
                 },
                 {
-                    "$ref": "#/definitions/PipewireLinkBinding",
+                    "$ref": "#/definitions/PipewireLinkAction",
                     "description": "Create a link between two nodes and ports within PipeWire"
                 },
                 {
-                    "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                    "$ref": "#/definitions/PipewireExclusiveLinkAction",
                     "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
                 },
                 {
-                    "$ref": "#/definitions/PipewireUnLinkBinding",
+                    "$ref": "#/definitions/PipewireUnLinkAction",
                     "description": "Destroy a link between two nodes and ports within PipeWire"
                 },
                 {
-                    "$ref": "#/definitions/LEDSetBinding",
+                    "$ref": "#/definitions/LEDSetAction",
                     "description": "Set the given button LED to the given color"
                 },
                 {
-                    "$ref": "#/definitions/LEDSaveBinding",
+                    "$ref": "#/definitions/LEDSaveAction",
                     "description": "Save the LED state of the given button"
                 },
                 {
-                    "$ref": "#/definitions/LEDRestoreBinding",
+                    "$ref": "#/definitions/LEDRestoreAction",
                     "description": "Restore the previously saved LED state of the\ngiven button"
                 }
             ]
         },
-        "ActionBinding_1": {
+        "Action_1": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/CommandBinding",
+                    "$ref": "#/definitions/CommandAction",
                     "description": "Execute a shell command when the binding is activated"
                 },
                 {
-                    "$ref": "#/definitions/RangeBinding",
+                    "$ref": "#/definitions/RangeAction",
                     "description": "Change the range of a dial when the binding is executed"
                 },
                 {
-                    "$ref": "#/definitions/MidiBinding",
+                    "$ref": "#/definitions/MidiAction",
                     "description": "Emit a MIDI event when the binding is activated"
                 },
                 {
-                    "$ref": "#/definitions/ToggleMuteBinding",
+                    "$ref": "#/definitions/CycleAction",
+                    "description": "Cycle through the given sub-bindings each time the binding\nis activated"
+                },
+                {
+                    "$ref": "#/definitions/CancelAction",
+                    "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)"
+                },
+                {
+                    "$ref": "#/definitions/ToggleMuteAction",
                     "description": "Turn on or off mute for the given dial"
                 },
                 {
-                    "$ref": "#/definitions/LV2ShowGUIBinding"
+                    "$ref": "#/definitions/LV2LoadPresetAction",
+                    "description": "Load an LV2 preset for the given plugin"
                 },
                 {
-                    "$ref": "#/definitions/LV2LoadPresetBinding"
-                },
-                {
-                    "$ref": "#/definitions/MixerSelectBinding",
+                    "$ref": "#/definitions/MixerSelectAction",
                     "description": "Open the selection prompt to assign an application\nto a mixer channel"
                 },
                 {
-                    "$ref": "#/definitions/PipewireLinkBinding",
+                    "$ref": "#/definitions/PipewireLinkAction",
                     "description": "Create a link between two nodes and ports within PipeWire"
                 },
                 {
-                    "$ref": "#/definitions/PipewireExclusiveLinkBinding",
+                    "$ref": "#/definitions/PipewireExclusiveLinkAction",
                     "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
                 },
                 {
-                    "$ref": "#/definitions/PipewireUnLinkBinding",
+                    "$ref": "#/definitions/PipewireUnLinkAction",
                     "description": "Destroy a link between two nodes and ports within PipeWire"
                 },
                 {
-                    "$ref": "#/definitions/LEDSetBinding",
+                    "$ref": "#/definitions/LEDSetAction",
                     "description": "Set the given button LED to the given color"
                 },
                 {
-                    "$ref": "#/definitions/LEDSaveBinding",
+                    "$ref": "#/definitions/LEDSaveAction",
                     "description": "Save the LED state of the given button"
                 },
                 {
-                    "$ref": "#/definitions/LEDRestoreBinding",
+                    "$ref": "#/definitions/LEDRestoreAction",
                     "description": "Restore the previously saved LED state of the\ngiven button"
                 }
             ]
@@ -116,14 +128,14 @@
         "ButtonBinding": {
             "$ref": "#/definitions/__type_2"
         },
-        "CancelBinding": {
-            "$ref": "#/definitions/__type_26"
+        "CancelAction": {
+            "$ref": "#/definitions/__type_15"
         },
-        "CommandBinding": {
+        "CommandAction": {
             "$ref": "#/definitions/__type_4"
         },
-        "CycleBinding": {
-            "$ref": "#/definitions/__type_25"
+        "CycleAction": {
+            "$ref": "#/definitions/__type_14"
         },
         "KeyEventAction": {
             "$ref": "#/definitions/KeyEventAction_1",
@@ -132,27 +144,17 @@
         "KeyEventAction_1": {
             "$ref": "#/definitions/__type_3"
         },
-        "LEDRestoreBinding": {
+        "LEDRestoreAction": {
+            "$ref": "#/definitions/__type_25"
+        },
+        "LEDSaveAction": {
             "$ref": "#/definitions/__type_24"
         },
-        "LEDSaveBinding": {
+        "LEDSetAction": {
             "$ref": "#/definitions/__type_23"
         },
-        "LEDSetBinding": {
-            "$ref": "#/definitions/__type_22"
-        },
-        "LV2LoadPresetBinding": {
-            "$ref": "#/definitions/__type_16"
-        },
-        "LV2ShowGUIBinding": {
-            "$ref": "#/definitions/__type_15"
-        },
-        "LongPressAction": {
-            "$ref": "#/definitions/LongPressAction_1",
-            "description": "Action(s) to execute on long press"
-        },
-        "LongPressAction_1": {
-            "$ref": "#/definitions/__type_27"
+        "LV2LoadPresetAction": {
+            "$ref": "#/definitions/__type_17"
         },
         "MapFunction": {
             "enum": [
@@ -163,7 +165,7 @@
             ],
             "type": "string"
         },
-        "MidiBinding": {
+        "MidiAction": {
             "$ref": "#/definitions/__type_6"
         },
         "MidiEventChannelPressureAftertouch": {
@@ -229,23 +231,23 @@
             ],
             "type": "string"
         },
-        "MixerSelectBinding": {
-            "$ref": "#/definitions/__type_17"
+        "MixerSelectAction": {
+            "$ref": "#/definitions/__type_18"
         },
         "NodeAndPort": {
-            "$ref": "#/definitions/__type_19"
+            "$ref": "#/definitions/__type_20"
         },
         "PassthroughBinding": {
             "$ref": "#/definitions/__type_1"
         },
-        "PipewireExclusiveLinkBinding": {
-            "$ref": "#/definitions/__type_20"
-        },
-        "PipewireLinkBinding": {
-            "$ref": "#/definitions/__type_18"
-        },
-        "PipewireUnLinkBinding": {
+        "PipewireExclusiveLinkAction": {
             "$ref": "#/definitions/__type_21"
+        },
+        "PipewireLinkAction": {
+            "$ref": "#/definitions/__type_19"
+        },
+        "PipewireUnLinkAction": {
+            "$ref": "#/definitions/__type_22"
         },
         "Range": {
             "items": [
@@ -260,11 +262,11 @@
             "minItems": 2,
             "type": "array"
         },
-        "RangeBinding": {
+        "RangeAction": {
             "$ref": "#/definitions/__type_5"
         },
-        "ToggleMuteBinding": {
-            "$ref": "#/definitions/__type_14"
+        "ToggleMuteAction": {
+            "$ref": "#/definitions/__type_16"
         },
         "__type": {
             "additionalProperties": {
@@ -397,6 +399,51 @@
         },
         "__type_14": {
             "additionalProperties": false,
+            "description": "Cycle through the given sub-bindings each time the binding\nis activated",
+            "properties": {
+                "actions": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/definitions/Action"
+                        },
+                        "type": "array"
+                    },
+                    "type": "array"
+                },
+                "type": {
+                    "enum": [
+                        "cycle"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "actions",
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_15": {
+            "additionalProperties": false,
+            "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)",
+            "properties": {
+                "alt": {
+                    "$ref": "#/definitions/Action_1"
+                },
+                "type": {
+                    "enum": [
+                        "cancel"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "type": "object"
+        },
+        "__type_16": {
+            "additionalProperties": false,
             "description": "Turn on or off mute for the given dial",
             "properties": {
                 "dial": {
@@ -419,27 +466,9 @@
             ],
             "type": "object"
         },
-        "__type_15": {
+        "__type_17": {
             "additionalProperties": false,
-            "properties": {
-                "pluginName": {
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "lv2::show_gui"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "pluginName",
-                "type"
-            ],
-            "type": "object"
-        },
-        "__type_16": {
-            "additionalProperties": false,
+            "description": "Load an LV2 preset for the given plugin",
             "properties": {
                 "pluginName": {
                     "type": "string"
@@ -461,7 +490,7 @@
             ],
             "type": "object"
         },
-        "__type_17": {
+        "__type_18": {
             "additionalProperties": false,
             "description": "Open the selection prompt to assign an application\nto a mixer channel",
             "properties": {
@@ -470,7 +499,7 @@
                 },
                 "onFinish": {
                     "items": {
-                        "$ref": "#/definitions/ActionBinding"
+                        "$ref": "#/definitions/Action"
                     },
                     "type": "array"
                 },
@@ -487,7 +516,7 @@
             ],
             "type": "object"
         },
-        "__type_18": {
+        "__type_19": {
             "additionalProperties": false,
             "description": "Create a link between two nodes and ports within PipeWire",
             "properties": {
@@ -511,27 +540,14 @@
             ],
             "type": "object"
         },
-        "__type_19": {
-            "additionalProperties": false,
-            "properties": {
-                "node": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "node",
-                "port"
-            ],
-            "type": "object"
-        },
         "__type_2": {
             "additionalProperties": false,
             "properties": {
+                "defaultLEDState": {
+                    "type": "string"
+                },
                 "onLongPress": {
-                    "$ref": "#/definitions/LongPressAction"
+                    "$ref": "#/definitions/KeyEventAction"
                 },
                 "onPress": {
                     "$ref": "#/definitions/KeyEventAction"
@@ -540,7 +556,7 @@
                     "$ref": "#/definitions/KeyEventAction"
                 },
                 "onShiftLongPress": {
-                    "$ref": "#/definitions/LongPressAction"
+                    "$ref": "#/definitions/KeyEventAction"
                 },
                 "onShiftPress": {
                     "$ref": "#/definitions/KeyEventAction"
@@ -558,6 +574,22 @@
             "type": "object"
         },
         "__type_20": {
+            "additionalProperties": false,
+            "properties": {
+                "node": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "node",
+                "port"
+            ],
+            "type": "object"
+        },
+        "__type_21": {
             "additionalProperties": false,
             "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one.",
             "properties": {
@@ -581,7 +613,7 @@
             ],
             "type": "object"
         },
-        "__type_21": {
+        "__type_22": {
             "additionalProperties": false,
             "description": "Destroy a link between two nodes and ports within PipeWire",
             "properties": {
@@ -605,7 +637,7 @@
             ],
             "type": "object"
         },
-        "__type_22": {
+        "__type_23": {
             "additionalProperties": false,
             "description": "Set the given button LED to the given color",
             "properties": {
@@ -629,7 +661,7 @@
             ],
             "type": "object"
         },
-        "__type_23": {
+        "__type_24": {
             "additionalProperties": false,
             "description": "Save the LED state of the given button",
             "properties": {
@@ -649,7 +681,7 @@
             ],
             "type": "object"
         },
-        "__type_24": {
+        "__type_25": {
             "additionalProperties": false,
             "description": "Restore the previously saved LED state of the\ngiven button",
             "properties": {
@@ -669,216 +701,18 @@
             ],
             "type": "object"
         },
-        "__type_25": {
-            "additionalProperties": false,
-            "description": "Cycle through the given sub-bindings each time the binding\nis activated",
-            "properties": {
-                "items": {
-                    "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                            "actions": {
-                                "items": {
-                                    "$ref": "#/definitions/ActionBinding"
-                                },
-                                "type": "array"
-                            },
-                            "color": {
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "actions"
-                        ],
-                        "type": "object"
-                    },
-                    "type": "array"
-                },
-                "type": {
-                    "enum": [
-                        "cycle"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "items",
-                "type"
-            ],
-            "type": "object"
-        },
-        "__type_26": {
-            "additionalProperties": false,
-            "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)",
-            "properties": {
-                "alt": {
-                    "$ref": "#/definitions/ActionBinding_1"
-                },
-                "type": {
-                    "enum": [
-                        "cancel"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "type"
-            ],
-            "type": "object"
-        },
-        "__type_27": {
-            "additionalProperties": false,
-            "description": "Action(s) to execute on long press",
-            "properties": {
-                "actions": {
-                    "items": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/definitions/CommandBinding",
-                                "description": "Execute a shell command when the binding is activated"
-                            },
-                            {
-                                "$ref": "#/definitions/RangeBinding",
-                                "description": "Change the range of a dial when the binding is executed"
-                            },
-                            {
-                                "$ref": "#/definitions/MidiBinding",
-                                "description": "Emit a MIDI event when the binding is activated"
-                            },
-                            {
-                                "$ref": "#/definitions/CycleBinding",
-                                "description": "Cycle through the given sub-bindings each time the binding\nis activated"
-                            },
-                            {
-                                "$ref": "#/definitions/CancelBinding",
-                                "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)"
-                            },
-                            {
-                                "$ref": "#/definitions/ToggleMuteBinding",
-                                "description": "Turn on or off mute for the given dial"
-                            },
-                            {
-                                "$ref": "#/definitions/LV2ShowGUIBinding"
-                            },
-                            {
-                                "$ref": "#/definitions/LV2LoadPresetBinding"
-                            },
-                            {
-                                "$ref": "#/definitions/MixerSelectBinding",
-                                "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireLinkBinding",
-                                "description": "Create a link between two nodes and ports within PipeWire"
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireUnLinkBinding",
-                                "description": "Destroy a link between two nodes and ports within PipeWire"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDSetBinding",
-                                "description": "Set the given button LED to the given color"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDSaveBinding",
-                                "description": "Save the LED state of the given button"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDRestoreBinding",
-                                "description": "Restore the previously saved LED state of the\ngiven button"
-                            }
-                        ]
-                    },
-                    "type": "array"
-                },
-                "color": {
-                    "type": "string"
-                },
-                "timeout": {
-                    "type": "number"
-                }
-            },
-            "required": [
-                "actions",
-                "timeout"
-            ],
-            "type": "object"
-        },
         "__type_3": {
             "additionalProperties": false,
             "description": "Actions(s) to execute on a key event such as a key\npress or release",
             "properties": {
                 "actions": {
                     "items": {
-                        "anyOf": [
-                            {
-                                "$ref": "#/definitions/CommandBinding",
-                                "description": "Execute a shell command when the binding is activated"
-                            },
-                            {
-                                "$ref": "#/definitions/RangeBinding",
-                                "description": "Change the range of a dial when the binding is executed"
-                            },
-                            {
-                                "$ref": "#/definitions/MidiBinding",
-                                "description": "Emit a MIDI event when the binding is activated"
-                            },
-                            {
-                                "$ref": "#/definitions/CycleBinding",
-                                "description": "Cycle through the given sub-bindings each time the binding\nis activated"
-                            },
-                            {
-                                "$ref": "#/definitions/CancelBinding",
-                                "description": "Cancel any current pending action. If there is no pending action\nthen the alt binding will be executed (if specified)"
-                            },
-                            {
-                                "$ref": "#/definitions/ToggleMuteBinding",
-                                "description": "Turn on or off mute for the given dial"
-                            },
-                            {
-                                "$ref": "#/definitions/LV2ShowGUIBinding"
-                            },
-                            {
-                                "$ref": "#/definitions/LV2LoadPresetBinding"
-                            },
-                            {
-                                "$ref": "#/definitions/MixerSelectBinding",
-                                "description": "Open the selection prompt to assign an application\nto a mixer channel"
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireLinkBinding",
-                                "description": "Create a link between two nodes and ports within PipeWire"
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireExclusiveLinkBinding",
-                                "description": "Create an exclusive link between two nodes and ports within PipeWire.\nCreating an exclusive link is equivalent to creating a normal link and then\ndestroying all other links originating from source port that aren't the newly\ncreated one."
-                            },
-                            {
-                                "$ref": "#/definitions/PipewireUnLinkBinding",
-                                "description": "Destroy a link between two nodes and ports within PipeWire"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDSetBinding",
-                                "description": "Set the given button LED to the given color"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDSaveBinding",
-                                "description": "Save the LED state of the given button"
-                            },
-                            {
-                                "$ref": "#/definitions/LEDRestoreBinding",
-                                "description": "Restore the previously saved LED state of the\ngiven button"
-                            }
-                        ]
+                        "$ref": "#/definitions/Action"
                     },
                     "type": "array"
                 },
-                "color": {
-                    "type": "string"
+                "timeout": {
+                    "type": "number"
                 }
             },
             "required": [
@@ -898,7 +732,7 @@
                 },
                 "onFinish": {
                     "items": {
-                        "$ref": "#/definitions/ActionBinding"
+                        "$ref": "#/definitions/Action"
                     },
                     "type": "array"
                 },
@@ -1138,13 +972,13 @@
                             },
                             "onConnect": {
                                 "items": {
-                                    "$ref": "#/definitions/ActionBinding"
+                                    "$ref": "#/definitions/Action"
                                 },
                                 "type": "array"
                             },
                             "onDisconnect": {
                                 "items": {
-                                    "$ref": "#/definitions/ActionBinding"
+                                    "$ref": "#/definitions/Action"
                                 },
                                 "type": "array"
                             }

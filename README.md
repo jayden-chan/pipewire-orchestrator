@@ -43,13 +43,15 @@ purpose input devices instead of just for musical performances.
 ## TODO
 
 - [ ] Hot reloading config file
+- [ ] Save and restore MIDI state between restarts
+- [ ] Gracefully handle unplugging MIDI device
 - [x] Improve and extend LV2 plugin host capabilities
-- [ ] Improve LED control in config file
+- [x] Improve LED control in config file
 - [x] Batch hex requests to amidi
 - [ ] Layers
 - [x] Shift key to turn dials without sending input
 - [x] Mute controls for dials
-- [ ] Guitar amp selection with buttons
+- [x] Guitar amp selection with buttons
 - [x] Microphone mute button
 - [x] EQ selection with buttons
 - [x] Auto-connect gain controllers with pw-dump watcher

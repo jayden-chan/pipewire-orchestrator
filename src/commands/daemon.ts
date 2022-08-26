@@ -22,6 +22,7 @@ import {
   destroyLink,
   ensureLink,
   exclusiveLink,
+  findMixer,
   findPwNode,
   mixerPorts,
   NodeWithPorts,
@@ -632,9 +633,11 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
           rule.forEach((binding) => doAction(binding, context))
         );
 
-      mixerRules.forEach(([nodeName, channel]) =>
-        handleMixerRule(nodeName, channel, context)
-      );
+      if (findMixer(context.pipewire.state) !== undefined) {
+        mixerRules.forEach(([nodeName, channel]) =>
+          handleMixerRule(nodeName, channel, context)
+        );
+      }
 
       Object.keys(context.pipewire.prevDevices).forEach((device) => {
         context.pipewire.prevDevices[device] = pwItems.some(findPwNode(device));

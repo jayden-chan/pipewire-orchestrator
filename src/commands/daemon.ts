@@ -56,101 +56,94 @@ const findDial = (event: MidiEventControlChange) => {
     b.channel === event.channel && b.controller === event.controller;
 };
 
-async function doActionBinding(
-  binding: Action,
-  context: DaemonContext
-): Promise<void> {
-  switch (binding.type) {
+async function doAction(action: Action, context: DaemonContext): Promise<void> {
+  switch (action.type) {
     case "cancel":
       if (context.rofiOpen) {
         run("xdotool key Escape").catch((err) => error(err));
-      } else if (binding.alt !== undefined) {
-        return doActionBinding(binding.alt, context);
+      } else if (action.alt !== undefined) {
+        return doAction(action.alt, context);
       }
       return;
     case "midi":
-      context.midishIn.push(binding.events.map(midiEventToMidish).join("\n"));
+      context.midishIn.push(action.events.map(midiEventToMidish).join("\n"));
       return;
     case "lv2::load_preset":
-      if (context.pluginStreams[binding.pluginName] !== undefined) {
-        context.pluginStreams[binding.pluginName].push(
-          `preset ${binding.preset}`
+      if (context.pluginStreams[action.pluginName] !== undefined) {
+        context.pluginStreams[action.pluginName].push(
+          `preset ${action.preset}`
         );
       }
       return;
     case "pipewire::link":
-      return ensureLink(
-        binding.src,
-        binding.dest,
-        context.pipewire.state
-      ).catch(handlePwLinkError);
+      return ensureLink(action.src, action.dest, context.pipewire.state).catch(
+        handlePwLinkError
+      );
     case "pipewire::unlink":
-      return destroyLink(
-        binding.src,
-        binding.dest,
-        context.pipewire.state
-      ).catch(handlePwLinkError);
+      return destroyLink(action.src, action.dest, context.pipewire.state).catch(
+        handlePwLinkError
+      );
     case "pipewire::exclusive_link":
       return exclusiveLink(
-        binding.src,
-        binding.dest,
+        action.src,
+        action.dest,
         context.pipewire.state
       ).catch(handlePwLinkError);
     case "range":
-      context.ranges[binding.dial] = binding.range;
+      context.ranges[action.dial] = action.range;
       // update the dial value immediately so we don't get a jump
       // in volume the next time the dial is moved
       return manifestDialValue(
-        binding.dial,
-        context.dials[binding.dial] ?? 0,
+        action.dial,
+        context.dials[action.dial] ?? 0,
         context
       );
     case "led::save":
-      context.ledSaveStates[binding.button] =
-        context.buttonColors[binding.button];
+      context.ledSaveStates[action.button] =
+        context.buttonColors[action.button];
       return;
   }
 
-  if (binding.type === "cycle") {
-    const id = await objectId(binding);
+  if (action.type === "cycle") {
+    const id = await objectId(action);
     context.cycleStates[id] =
-      ((context.cycleStates[id] ?? 0) + 1) % binding.actions.length;
+      ((context.cycleStates[id] ?? 0) + 1) % action.actions.length;
 
-    const newBind = binding.actions[context.cycleStates[id]];
+    const newBind = action.actions[context.cycleStates[id]];
     return Promise.all(
       newBind.map((bind) => {
-        return doActionBinding(bind, context);
+        return doAction(bind, context);
       })
     ).then(() => Promise.resolve());
   }
 
-  if (binding.type === "mute") {
+  if (action.type === "mute") {
     let controlVal = 0;
-    if (binding.mute) {
-      context.mutes[binding.dial] = true;
+    if (action.mute) {
+      context.mutes[action.dial] = true;
       controlVal = 0;
     } else {
-      context.mutes[binding.dial] = false;
-      controlVal = context.dials[binding.dial] ?? 0;
+      context.mutes[action.dial] = false;
+      controlVal = context.dials[action.dial] ?? 0;
     }
 
-    return manifestDialValue(binding.dial, controlVal, context);
+    return manifestDialValue(action.dial, controlVal, context);
   }
 
-  if (binding.type === "led::set" || binding.type === "led::restore") {
+  if (action.type === "led::set" || action.type === "led::restore") {
     const button = context.config.device.buttons.find(
-      (b) => b.label === binding.button
+      (b) => b.label === action.button
     );
 
     if (button === undefined) {
-      warn(`[led::set]`, `button "${binding.button}" not found`);
+      warn(`[led::set]`, `button "${action.button}" not found`);
       return;
     }
 
     const color =
-      binding.type === "led::set"
-        ? binding.color
-        : context.ledSaveStates[binding.button];
+      action.type === "led::set"
+        ? action.color
+        : context.ledSaveStates[action.button];
 
     const data = buttonLEDBytes(
       button,
@@ -162,15 +155,15 @@ async function doActionBinding(
     return amidiSend(context.config.outputMidi, [data]).catch(handleAmidiError);
   }
 
-  if (binding.type === "command") {
-    const id = await objectId(binding);
+  if (action.type === "command") {
+    const id = await objectId(action);
     const onFinished = (timestamp: number) => {
       delete context.commandStates[id];
 
       setTimeout(
         () => {
-          (binding.onFinish ?? []).forEach((action) =>
-            doActionBinding(action, context).catch((err) =>
+          (action.onFinish ?? []).forEach((action) =>
+            doAction(action, context).catch((err) =>
               error(
                 `[command::onFinish]`,
                 `Error ocurred in command onFinish function: `,
@@ -183,10 +176,7 @@ async function doActionBinding(
       );
     };
 
-    if (
-      binding.cancelable === true &&
-      context.commandStates[id] !== undefined
-    ) {
+    if (action.cancelable === true && context.commandStates[id] !== undefined) {
       const [timestamp, process] = context.commandStates[id];
       if (process !== undefined) {
         process.kill();
@@ -196,7 +186,7 @@ async function doActionBinding(
     }
 
     const timestamp = new Date().valueOf();
-    const childProcess = exec(binding.command, (err) => {
+    const childProcess = exec(action.command, (err) => {
       const commandState = context.commandStates[id];
       // command has already been killed, no need to run
       // the callback
@@ -220,7 +210,7 @@ async function doActionBinding(
     return;
   }
 
-  if (binding.type == "mixer::select") {
+  if (action.type == "mixer::select") {
     // can't open rofi twice at the same time
     if (context.rofiOpen) {
       return;
@@ -244,7 +234,7 @@ async function doActionBinding(
     return run(cmd)
       .then(async ([stdout]) => {
         const source = sources[stdout.trim()];
-        const channel = mixerChannels[`Mixer Channel ${binding.channel}`];
+        const channel = mixerChannels[`Mixer Channel ${action.channel}`];
         return connectAppToMixer(
           source,
           channel,
@@ -255,8 +245,8 @@ async function doActionBinding(
       .catch((_) => {})
       .finally(() => {
         context.rofiOpen = false;
-        (binding.onFinish ?? []).forEach((action) =>
-          doActionBinding(action, context).catch((err) => {
+        (action.onFinish ?? []).forEach((action) =>
+          doAction(action, context).catch((err) => {
             error(
               `[mixer::select]`,
               `Error ocurred in onFinish handler: ${err}`
@@ -302,7 +292,7 @@ async function handleNoteOn(
         buttonLEDBytes(button, color, button.channel, button.note, context),
       ]);
 
-      Promise.all(actions.map((bind) => doActionBinding(bind, context)))
+      Promise.all(actions.map((bind) => doAction(bind, context)))
         .then(() => Promise.resolve())
         .catch((err) => error(`[button-executor]`, err));
     };
@@ -385,7 +375,7 @@ function handleNoteOff(event: MidiEventNoteOff, context: DaemonContext) {
 
   if (binding.onRelease !== undefined) {
     return Promise.all(
-      binding.onRelease.actions.map((bind) => doActionBinding(bind, context))
+      binding.onRelease.actions.map((bind) => doAction(bind, context))
     ).then(() => Promise.resolve());
   }
 }
@@ -629,7 +619,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
             pwItems.some(findPwNode(node))
         )
         .forEach(([, rule]) =>
-          rule.forEach((binding) => doActionBinding(binding, context))
+          rule.forEach((binding) => doAction(binding, context))
         );
 
       onDisconnectRules
@@ -639,7 +629,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
             !pwItems.some(findPwNode(node))
         )
         .forEach(([, rule]) =>
-          rule.forEach((binding) => doActionBinding(binding, context))
+          rule.forEach((binding) => doAction(binding, context))
         );
 
       mixerRules.forEach(([nodeName, channel]) =>

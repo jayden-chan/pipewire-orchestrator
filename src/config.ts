@@ -18,17 +18,6 @@ export type CommandAction = {
 };
 
 /**
- * Pass through the MIDI input to the given channel and controller,
- * optionally passing the input through the mapping function first
- */
-export type PassthroughBinding = {
-  type: "passthrough";
-  mapFunction?: MapFunction;
-  outChannel: number;
-  outController: number;
-};
-
-/**
  * Change the range of a dial when the binding is executed
  */
 export type RangeAction = {
@@ -173,7 +162,19 @@ export type KeyEventAction = {
   timeout?: number;
 };
 
+/**
+ * Pass through the MIDI input to the given channel and controller,
+ * optionally passing the input through the mapping function first
+ */
+export type PassthroughBinding = {
+  type: "passthrough";
+  mapFunction?: MapFunction;
+  outChannel: number;
+  outController: number;
+};
+
 export type DialBinding = PassthroughBinding;
+
 export type ButtonBinding = {
   type: "button";
   defaultLEDState?: string;

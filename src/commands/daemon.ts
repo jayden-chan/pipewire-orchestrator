@@ -138,7 +138,7 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
     );
 
     if (button === undefined) {
-      warn(`[led::set]`, `button "${action.button}" not found`);
+      warn(`[led-set]`, `button "${action.button}" not found`);
       return;
     }
 
@@ -167,7 +167,7 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
           (action.onFinish ?? []).forEach((action) =>
             doAction(action, context).catch((err) =>
               error(
-                `[command::onFinish]`,
+                `[command-on-finish]`,
                 `Error ocurred in command onFinish function: `,
                 err
               )
@@ -250,7 +250,7 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
         (action.onFinish ?? []).forEach((action) =>
           doAction(action, context).catch((err) => {
             error(
-              `[mixer::select]`,
+              `[mixer-select]`,
               `Error ocurred in onFinish handler: ${err}`
             );
           })
@@ -282,7 +282,7 @@ async function handleNoteOn(
     return;
   }
 
-  debug("[button pressed]", button.label);
+  debug("[button-pressed]", button.label);
   const binding = context.config.bindings[button.label];
   if (binding === undefined || binding.type !== "button") {
     return;

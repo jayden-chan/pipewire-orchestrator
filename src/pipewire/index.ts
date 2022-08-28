@@ -100,7 +100,7 @@ export function findMixer(dump: PipewireDump): PipewireItem | undefined {
   );
 
   if (mixer === undefined) {
-    error("[findMixer] could not find mixer node");
+    error("[find-mixer] could not find mixer node");
   }
 
   return mixer;

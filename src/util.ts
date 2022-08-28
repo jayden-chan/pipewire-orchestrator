@@ -150,7 +150,7 @@ export async function connectMidiDevices(
 
   try {
     const command = `aconnect ${d1Client} ${d2Client}`;
-    debug("[connectMidiDevices]", command);
+    debug("[connect-midi-devices]", command);
     await run(command);
   } catch (e) {
     const error = e as RunCommandError;
@@ -219,7 +219,7 @@ export function buttonLEDBytes(
       ([c]) => c === color
     );
 
-    debug(`[buttonLEDBytes]`, button.label, color);
+    debug(`[button-LED-bytes]`, button.label, color);
 
     if (ledState === undefined) {
       warn(`Button ${button.label} doesn't support requested color ${color}`);

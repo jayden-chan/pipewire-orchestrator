@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { Readable } from "stream";
 import { handlePwLinkError } from "../errors";
 import { debug, error, log, warn } from "../logger";
+import { Process, ProcessFailureError } from "../runnable";
 import { run } from "../util";
 import { Convert, PipewireItem, PipewireItemType } from "./types";
 
@@ -344,23 +345,25 @@ export async function exclusiveLink(
   await modifyLink(src, dest, dump, "ensure");
 }
 
-export function watchPwDump(): [Promise<void>, Readable] {
+export function watchPwDump(id: string): [Promise<Process>, Readable] {
   const stream = new Readable({
     read() {},
   });
-  const prom = new Promise<void>((resolve, reject) => {
-    const cmd = spawn("pw-dump", ["-m", "--color=never"]);
+
+  const prom = new Promise<Process>((resolve, reject) => {
+    const cmd = spawn("pw-dump", ["--monitor", "--color=never"]);
 
     cmd.stderr.on("data", (data) => {
       error(`pw-dump stderr: ${data.toString()}`);
     });
 
-    cmd.on("close", (code) => {
-      log(`pw-dump process exited with code ${code}`);
-      if (code === 0) {
-        resolve();
+    cmd.on("close", (exitCode) => {
+      const msg = `pw-dump process exited with code ${exitCode}`;
+      log(msg);
+      if (exitCode === 0) {
+        resolve({ id, exitCode });
       } else {
-        reject(code);
+        reject(new ProcessFailureError(msg, id, exitCode ?? 1));
       }
     });
 

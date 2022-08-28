@@ -137,7 +137,6 @@ export async function connectMidiDevices(
 ): Promise<void> {
   const devices = aconnectListing.split(/\r?\n/g).map((line) => {
     const [, clientNum, name] = line.match(PORT_RE) ?? [];
-    debug(clientNum, name);
     return { clientNum, name };
   });
 
@@ -220,7 +219,7 @@ export function buttonLEDBytes(
       ([c]) => c === color
     );
 
-    debug(`[buttonLEDBytes]`, button, color, channel, note);
+    debug(`[buttonLEDBytes]`, button.label, color);
 
     if (ledState === undefined) {
       warn(`Button ${button.label} doesn't support requested color ${color}`);

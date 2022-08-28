@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import { Readable } from "stream";
 import { MidiEvent, MidiEventType } from ".";
 import { debug, error, log } from "../logger";
+import { Process, ProcessFailureError } from "../runnable";
 
 export function midiEventToMidish(
   event: MidiEvent,
@@ -37,20 +38,21 @@ export function midiEventToMidish(
   return cmd;
 }
 
-export function midish(): [Promise<void>, Readable] {
+export function midish(id: string): [Promise<Process>, Readable] {
   const stream = new Readable({
     read() {},
   });
 
-  const prom = new Promise<void>((resolve, reject) => {
+  const prom = new Promise<Process>((resolve, reject) => {
     const cmd = spawn("stdbuf", ["-i0", "-o0", "-e0", "midish"]);
 
-    cmd.on("close", (code) => {
-      log(`midish process exited with code ${code}`);
-      if (code === 0) {
-        resolve();
+    cmd.on("close", (exitCode) => {
+      const msg = `midish process exited with code ${exitCode}`;
+      log(msg);
+      if (exitCode === 0) {
+        resolve({ id, exitCode });
       } else {
-        reject({ code });
+        reject(new ProcessFailureError(msg, id, exitCode ?? 1));
       }
     });
 

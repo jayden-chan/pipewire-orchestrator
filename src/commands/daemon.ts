@@ -30,6 +30,7 @@ import {
   updateDump,
   watchPwDump,
 } from "../pipewire";
+import { ProcessFailureError } from "../runnable";
 import {
   buttonLEDBytes,
   connectMidiDevices,
@@ -518,10 +519,6 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     await connectMidiDevices(aconnectListing, d1, d2);
   }
 
-  const [watchMidiPromise, stream] = watchMidi(devicePort);
-  const [pipewirePromise, pipewire] = watchPwDump();
-  const [midishPromise, midishIn] = midish();
-
   // mapping of plugin name to its input stream
   const pluginStreams = Object.fromEntries(
     rawConfig.pipewire.plugins.map((plugin) => {
@@ -563,6 +560,8 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
       number | "round_robin"
     ][];
 
+  const [midishPromise, midishIn] = midish("midish");
+
   const context: DaemonContext = {
     config,
     midishIn,
@@ -603,6 +602,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     defaultLEDStates(context.config.bindings, context)
   );
 
+  const [pipewirePromise, pipewire] = watchPwDump("watchPwDump");
   pipewire.on("data", (data) => {
     updateDump(data.toString(), context.pipewire.state);
 
@@ -645,7 +645,8 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     }, UPDATE_HOOK_TIMEOUT_MS);
   });
 
-  stream.on("data", (data) => {
+  const [watchMidiPromise, midiStream] = watchMidi(devicePort, "watchMidi");
+  midiStream.on("data", (data) => {
     const event = JSON.parse(data) as MidiEvent;
     debug("[midi]", event);
 
@@ -665,10 +666,21 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   });
 
   try {
-    await Promise.race([watchMidiPromise, pipewirePromise, midishPromise]);
+    const resolved = await Promise.race([
+      watchMidiPromise,
+      pipewirePromise,
+      midishPromise,
+    ]);
+
+    if (resolved.id === "watchMidi") {
+      warn("Device was unplugged");
+    }
+
     return 0;
   } catch (err) {
-    error(`Problem ocurred with daemon: exit code ${err}`);
+    if (err instanceof ProcessFailureError) {
+      error(`Problem ocurred with ${err.id}: exit code ${err.exitCode}`);
+    }
     return 1;
   }
 }

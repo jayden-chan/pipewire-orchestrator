@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { debug, error, log, warn } from "../logger";
+import { Process, ProcessFailureError } from "../runnable";
 import { run } from "../util";
 
 export type ByteTriplet = {
@@ -134,19 +135,23 @@ export async function amidiSend(
   await run(`amidi -p "${port}" --send-hex="${hex}"`);
 }
 
-export function watchMidi(channel: string): [Promise<void>, Readable] {
+export function watchMidi(
+  channel: string,
+  id: string
+): [Promise<Process>, Readable] {
   const stream = new Readable({
     read() {},
   });
 
-  const prom = new Promise<void>((resolve, reject) => {
+  const prom = new Promise<Process>((resolve, reject) => {
     const cmd = spawn("amidi", ["-p", channel, "--dump"]);
-    cmd.on("close", (code) => {
-      log(`amidi process exited with code ${code}`);
-      if (code === 0) {
-        resolve();
+    cmd.on("close", (exitCode) => {
+      const msg = `amidi process exited with code ${exitCode}`;
+      log(msg);
+      if (exitCode === 0) {
+        resolve({ id, exitCode });
       } else {
-        reject(code);
+        reject(new ProcessFailureError(msg, id, exitCode ?? 1));
       }
     });
 

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { MidiEvent, MidiEventType } from ".";
-import { debug, error, log } from "../logger";
+import { debug, log, warn } from "../logger";
 import { Process, ProcessFailureError } from "../runnable";
 
 export function midiEventToMidish(
@@ -57,11 +57,11 @@ export function midish(id: string): [Promise<Process>, Readable] {
     });
 
     cmd.stderr.on("data", (data) => {
-      error(`[midish]: ${data.toString().trim()}`);
+      warn(`[midish-stderr]: ${data.toString().trim()}`);
     });
 
     cmd.stdout.on("data", (data) => {
-      log(`[midish]: ${data.toString().trim()}`);
+      log(`[midish-stdout]: ${data.toString().trim()}`);
     });
 
     let co = "out0";

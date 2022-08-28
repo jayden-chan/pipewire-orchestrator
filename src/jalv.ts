@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
 import { LV2Plugin } from "./config";
-import { debug, error, log } from "./logger";
+import { debug, error, log, warn } from "./logger";
 
 export function jalv(
   plugin: LV2Plugin,
@@ -51,7 +51,7 @@ export function jalv(
       const filtered = filterOutput(data);
       if (filtered.length !== 0) {
         filtered.forEach((line) => {
-          error(`[jalv]: ${line}`);
+          warn(`[jalv-stderr]: ${line}`);
         });
       }
     });
@@ -60,7 +60,7 @@ export function jalv(
       const filtered = filterOutput(data);
       if (filtered.length !== 0) {
         filtered.forEach((line) => {
-          log(`[jalv]: ${line}`);
+          log(`[jalv-stdout]: ${line}`);
         });
       }
     });

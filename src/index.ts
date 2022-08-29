@@ -1,4 +1,4 @@
-import { daemonCommand } from "./commands/daemon";
+import { daemonCommand } from "./daemon/daemon";
 
 async function main() {
   const cmd = process.argv[2];

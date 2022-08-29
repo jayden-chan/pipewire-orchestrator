@@ -1,7 +1,7 @@
 import { exec, ExecException } from "child_process";
 import { createHash } from "crypto";
-import { DaemonContext } from "./commands/daemon";
 import { Bindings, PassthroughBinding } from "./config";
+import { DaemonContext } from "./daemon/daemon";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
@@ -14,7 +14,7 @@ import {
 } from "./pipewire";
 
 const PORT_RE = /client (\d+): '(.*?)'/;
-const deviceRe = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
+const DEVICE_RE = /^IO\s+([a-zA-Z0-9:,]+)\s+(.*?)$/;
 
 export type RunCommandError = {
   error: ExecException;
@@ -112,7 +112,7 @@ export async function findDevicePort(
     line.includes(searchName)
   );
   const ports = devicePortLines
-    .map((l) => l.match(deviceRe))
+    .map((l) => l.match(DEVICE_RE))
     .filter((l) => l !== null);
   if (devicePortLines.length === 0 || ports.length === 0) {
     error(`Unable to locate device "${name}"`);

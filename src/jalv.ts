@@ -51,7 +51,7 @@ export function jalv(
       const filtered = filterOutput(data);
       if (filtered.length !== 0) {
         filtered.forEach((line) => {
-          warn(`[jalv-stderr]: ${line}`);
+          warn(`[jalv-stderr]`, line);
         });
       }
     });
@@ -60,7 +60,7 @@ export function jalv(
       const filtered = filterOutput(data);
       if (filtered.length !== 0) {
         filtered.forEach((line) => {
-          log(`[jalv-stdout]: ${line}`);
+          log(`[jalv-stdout]`, line);
         });
       }
     });
@@ -71,7 +71,7 @@ export function jalv(
         command += "\n";
       }
 
-      debug(`[jalv] [command]:`, command.replace(/\r?\n/g, "<CR>"));
+      debug(`[jalv] [command]`, command.replace(/\r?\n/g, "<CR>"));
 
       cmd.stdin.write(command, (err) => {
         if (err) {

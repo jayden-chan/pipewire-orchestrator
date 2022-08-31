@@ -175,7 +175,7 @@ export async function connectAppToMixer(
       !srcLinks.links.some(([, dPort]) => dPort.id === destPort.id)
     ) {
       const command = `pw-link "${sourcePortId}" "${destPort.id}"`;
-      debug(`[command] ${command}`);
+      debug("[command]", command);
       proms.push(run(command).catch(handlePwLinkError));
     }
 
@@ -184,7 +184,7 @@ export async function connectAppToMixer(
       srcLinks.links.forEach(([, dPort]) => {
         if (dPort.id !== destPort.id) {
           const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
-          debug(`[command] ${command}`);
+          debug("[command]", command);
           proms.push(run(command).catch(handlePwLinkError));
         }
       });
@@ -193,7 +193,7 @@ export async function connectAppToMixer(
       srcLinks.links.forEach(([dNode, dPort]) => {
         if (dNode.info?.props?.["node.description"] === "Audio Output") {
           const command = `pw-link -d "${sourcePortId}" "${dPort.id}"`;
-          debug(`[command] ${command}`);
+          debug("[command]", command);
           proms.push(run(command).catch(handlePwLinkError));
         }
       });
@@ -291,14 +291,14 @@ async function modifyLink(
       !srcLinks.links.some((link) => link[0].id === destNode.id))
   ) {
     const command = `pw-link "${srcPort.id}" "${destPort.id}"`;
-    debug(`[command] ${command}`);
+    debug("[command]", command);
     await run(command);
   } else if (
     mode === "destroy" &&
     srcLinks?.links.some((link) => link[0].id === destNode.id)
   ) {
     const command = `pw-link -d "${srcPort.id}" "${destPort.id}"`;
-    debug(`[command] ${command}`);
+    debug("[command]", command);
     await run(command);
   }
 }
@@ -336,7 +336,7 @@ export async function exclusiveLink(
     srcLinks.links.forEach(([, dPort]) => {
       if (dPort.id !== destPort.id) {
         const command = `pw-link -d "${srcPort.id}" "${dPort.id}"`;
-        debug(`[command] ${command}`);
+        debug("[command]", command);
         run(command).catch(handlePwLinkError);
       }
     });
@@ -354,7 +354,7 @@ export function watchPwDump(id: string): [Promise<Process>, Readable] {
     const cmd = spawn("pw-dump", ["--monitor", "--color=never"]);
 
     cmd.stderr.on("data", (data) => {
-      error(`pw-dump stderr: ${data.toString()}`);
+      error("[pw-dump-stderr]", data.toString());
     });
 
     cmd.on("close", (exitCode) => {

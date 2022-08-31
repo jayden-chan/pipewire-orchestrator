@@ -156,7 +156,7 @@ export function watchMidi(
     });
 
     cmd.stderr.on("data", (data) => {
-      error(`amidi stderr: ${data.toString()}`);
+      error(`[amidi-stderr]`, data.toString());
     });
 
     cmd.stdout.on("data", (data) => {

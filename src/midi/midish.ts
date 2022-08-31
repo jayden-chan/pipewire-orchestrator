@@ -57,11 +57,11 @@ export function midish(id: string): [Promise<Process>, Readable] {
     });
 
     cmd.stderr.on("data", (data) => {
-      warn(`[midish-stderr]: ${data.toString().trim()}`);
+      warn(`[midish-stderr]`, data.toString().trim());
     });
 
     cmd.stdout.on("data", (data) => {
-      log(`[midish-stdout]: ${data.toString().trim()}`);
+      log(`[midish-stdout]`, data.toString().trim());
     });
 
     let co = "out0";
@@ -79,7 +79,7 @@ export function midish(id: string): [Promise<Process>, Readable] {
         midishCmd = `co ${co}\n${midishCmd}`;
       }
 
-      debug(`[midish] [cmd]:`, midishCmd.replace(/\r?\n/g, "<CR>"));
+      debug(`[midish] [cmd]`, midishCmd.replace(/\r?\n/g, "<CR>"));
 
       cmd.stdin.write(midishCmd, (err) => {
         if (err) {

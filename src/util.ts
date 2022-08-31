@@ -144,7 +144,10 @@ export async function connectMidiDevices(
   const d2Client = devices.find((d) => d.name === d2)?.clientNum;
 
   if (d1Client === undefined || d2Client === undefined) {
-    warn(`Failed to locate either "${d1}" or "${d2}"`);
+    warn(
+      "[connect-midi-devices]",
+      `Failed to locate either "${d1}" or "${d2}"`
+    );
     return;
   }
 
@@ -222,7 +225,10 @@ export function buttonLEDBytes(
     debug(`[button-LED-bytes]`, button.label, color);
 
     if (ledState === undefined) {
-      warn(`Button ${button.label} doesn't support requested color ${color}`);
+      warn(
+        "[button-LED-bytes]",
+        `Button ${button.label} doesn't support requested color ${color}`
+      );
     } else {
       context.buttonColors[button.label] = color;
       return {

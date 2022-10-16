@@ -583,7 +583,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
       timeout: undefined,
       prevDevices: Object.fromEntries([
         ...onConnectRules.map(([node]) => [node, false]),
-        ...onDisconnectRules.map(([node]) => [node, true]),
+        ...onDisconnectRules.map(([node]) => [node, false]),
       ]),
       state: {
         items: {},

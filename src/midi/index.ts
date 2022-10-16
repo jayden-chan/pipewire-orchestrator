@@ -95,7 +95,7 @@ export function midiEventToNumber(event: MidiEventType): number {
   }
 }
 
-export function midiNumberToEvent(num: number): MidiEventType {
+export function midiNumberToEvent(num: number): MidiEventType | undefined {
   switch (num) {
     case 0b1000:
       return MidiEventType.NoteOff;
@@ -111,10 +111,14 @@ export function midiNumberToEvent(num: number): MidiEventType {
       return MidiEventType.ChannelPressureAftertouch;
     case 0b1110:
       return MidiEventType.PitchBend;
-    default:
-      throw new Error(
-        `Unknown MIDI event type "${num.toString(16).padStart(2, "0")}" found`
-      );
+    default: {
+      const msg = `Unknown MIDI event type "${num
+        .toString(16)
+        .padStart(2, "0")}" found`;
+
+      debug(`[midi-byte-to-event-type] ${msg}`);
+      return undefined;
+    }
   }
 }
 
@@ -145,6 +149,7 @@ export function watchMidi(
 
   const prom = new Promise<Process>((resolve, reject) => {
     const cmd = spawn("amidi", ["-p", channel, "--dump"]);
+    let prevB1 = 0;
     cmd.on("close", (exitCode) => {
       const msg = `amidi process exited with code ${exitCode}`;
       log(msg);
@@ -174,19 +179,27 @@ export function watchMidi(
 
           debug("[midi-raw]", line);
 
-          const b1 = parseInt(line.slice(0, 2), 16);
-          const b2 = parseInt(line.slice(2, 4), 16);
-          const b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;
+          let b1 = parseInt(line.slice(0, 2), 16);
+          let b2 = parseInt(line.slice(2, 4), 16);
+          let b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;
+
+          // For some reason the virtual midi driver omits the first byte
+          // if it's the same as the previous message.
+          if (midiNumberToEvent(b1 >> 4) === undefined && line.length === 4) {
+            b3 = b2;
+            b2 = b1;
+            b1 = prevB1;
+          }
 
           const channel = b1 & 0b00001111;
 
           let event: MidiEvent | undefined;
-          let type: MidiEventType;
-          try {
-            type = midiNumberToEvent(b1 >> 4);
-          } catch (e) {
+          const type = midiNumberToEvent(b1 >> 4);
+          if (type === undefined) {
             return undefined;
           }
+
+          prevB1 = b1;
 
           switch (type) {
             case MidiEventType.NoteOn:

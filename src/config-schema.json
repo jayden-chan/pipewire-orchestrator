@@ -914,6 +914,9 @@
         "device": {
             "type": "string"
         },
+        "inputMidi": {
+            "type": "string"
+        },
         "lv2Path": {
             "type": "string"
         },
@@ -1002,6 +1005,7 @@
         "bindings",
         "connections",
         "device",
+        "inputMidi",
         "outputMidi",
         "pipewire"
     ],

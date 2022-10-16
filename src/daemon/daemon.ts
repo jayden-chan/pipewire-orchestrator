@@ -501,8 +501,13 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   const rawConfig = await readConfig(configPath);
   log("Loaded config file");
 
+  const [aconnectListing] = await run("aconnect --list");
+  for (const [d1, d2] of rawConfig.connections) {
+    await connectMidiDevices(aconnectListing, d1, d2);
+  }
+
   const dev = rawConfig.device;
-  const devicePort = await findDevicePort(dev);
+  const devicePort = await findDevicePort(rawConfig.inputMidi);
   if (!devicePort) {
     error("Failed to extract port from device listing");
     return 1;
@@ -512,11 +517,6 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   if (!outputPort) {
     error("Failed to extract port from device listing");
     return 1;
-  }
-
-  const [aconnectListing] = await run("aconnect --list");
-  for (const [d1, d2] of rawConfig.connections) {
-    await connectMidiDevices(aconnectListing, d1, d2);
   }
 
   // mapping of plugin name to its input stream

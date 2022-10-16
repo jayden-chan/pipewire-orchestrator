@@ -213,6 +213,7 @@ export type LV2Plugin = {
 export type Config = {
   connections: [string, string][];
   device: string;
+  inputMidi: string;
   outputMidi: string;
   bindings: Bindings;
   lv2Path?: string;

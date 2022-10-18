@@ -431,7 +431,8 @@ function handleMixerRule(
     // that all apps matching the search term are assigned to the same channel.
     if (currentlyAssignedChannel !== undefined) {
       debug(
-        `[mixer-reassign] connecting ${nodeName} to ${currentlyAssignedChannel.node.id}`
+        "[mixer-reassign]",
+        `connecting ${nodeName} to ${currentlyAssignedChannel.node.id}`
       );
       connectAppToMixer(
         appToConnect,

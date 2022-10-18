@@ -222,13 +222,13 @@ export function findLinkPair(
   // instead of find. same thing with the destination node
   const srcNodes = items.filter(findPwNode(src.node));
   if (srcNodes.length === 0) {
-    warn(`[pw-link] failed to locate src node "${src.node}"`);
+    warn("[pw-link]", `failed to locate src node "${src.node}"`);
     return undefined;
   }
 
   const destNodes = items.filter(findPwNode(dest.node));
   if (destNodes.length === 0) {
-    warn(`[pw-link] failed to locate dest node "${dest.node}"`);
+    warn("[pw-link]", `failed to locate dest node "${dest.node}"`);
     return undefined;
   }
 
@@ -240,7 +240,7 @@ export function findLinkPair(
   );
 
   if (srcPort === undefined) {
-    warn(`[pw-link] failed to locate src port "${src.port}"`);
+    warn("[pw-link]", `failed to locate src port "${src.port}"`);
     return undefined;
   }
 
@@ -252,7 +252,7 @@ export function findLinkPair(
   );
 
   if (destPort === undefined) {
-    warn(`[pw-link] failed to locate dest port "${dest.port}"`);
+    warn("[pw-link]", `failed to locate dest port "${dest.port}"`);
     return undefined;
   }
 

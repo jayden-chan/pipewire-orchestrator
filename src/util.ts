@@ -4,7 +4,7 @@ import { Bindings, PassthroughBinding } from "./config";
 import { DaemonContext } from "./daemon/daemon";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
-import { ByteTriplet, midiEventToNumber, MidiEventType } from "./midi";
+import { ByteTriplet, midiEventToNumber } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
 import {
   findMixer,
@@ -80,7 +80,7 @@ export function manifestDialValue(
   context.midishIn.push(
     midiEventToMidish(
       {
-        type: MidiEventType.ControlChange,
+        type: "CONTROL_CHANGE",
         channel: dialBinding[1].outChannel,
         controller: dialBinding[1].outController,
         value: newVal,
@@ -232,7 +232,7 @@ export function buttonLEDBytes(
     } else {
       context.buttonColors[button.label] = color;
       return {
-        b1: (midiEventToNumber(MidiEventType.NoteOn) << 4) | channel,
+        b1: (midiEventToNumber("NOTE_ON") << 4) | channel,
         b2: note,
         b3: ledState[1],
       };

@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { Readable } from "stream";
-import { MidiEvent, MidiEventType } from ".";
+import { MidiEvent } from ".";
 import { debug, log, warn } from "../logger";
 import { Process, ProcessFailureError } from "../runnable";
 
@@ -10,26 +10,26 @@ export function midiEventToMidish(
 ): string {
   let cmd = "";
   switch (event.type) {
-    case MidiEventType.NoteOn:
-    case MidiEventType.NoteOff:
+    case "NOTE_ON":
+    case "NOTE_OFF":
       throw new Error("cannot use NoteOn or NoteOff events with midish");
-    case MidiEventType.PolyphonicAftertouch:
+    case "POLYPHONIC_AFTERTOUCH":
       cmd = `oaddev {kat out${event.channel} ${event.note} ${event.pressure}}`;
       break;
-    case MidiEventType.ControlChange:
+    case "CONTROL_CHANGE":
       if (typeof flags !== "number" && flags?.highPrecisionControl) {
         cmd = `oaddev {xctl out${event.channel} ${event.controller} ${event.value}}`;
       } else {
         cmd = `oaddev {ctl out${event.channel} ${event.controller} ${event.value}}`;
       }
       break;
-    case MidiEventType.ProgramChange:
+    case "PROGRAM_CHANGE":
       cmd = `oaddev {xpc out${event.channel} ${event.program}}`;
       break;
-    case MidiEventType.ChannelPressureAftertouch:
+    case "CHANNEL_PRESSURE_AFTERTOUCH":
       cmd = `oaddev {cat out${event.channel} ${event.pressure}}`;
       break;
-    case MidiEventType.PitchBend:
+    case "PITCH_BEND":
       const amount = (event.msb << 4) | event.lsb;
       cmd = `oaddev {bend out${event.channel} ${amount}}`;
       break;

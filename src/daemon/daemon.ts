@@ -12,7 +12,6 @@ import {
   MidiEventControlChange,
   MidiEventNoteOff,
   MidiEventNoteOn,
-  MidiEventType,
   watchMidi,
 } from "../midi";
 import { midiEventToMidish, midish } from "../midi/midish";
@@ -652,13 +651,13 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     debug("[midi]", event);
 
     switch (event.type) {
-      case MidiEventType.NoteOn:
+      case "NOTE_ON":
         handleNoteOn(event, context);
         break;
-      case MidiEventType.NoteOff:
+      case "NOTE_OFF":
         handleNoteOff(event, context);
         break;
-      case MidiEventType.ControlChange:
+      case "CONTROL_CHANGE":
         handleControlChange(event, context);
         break;
       default:

@@ -1,6 +1,7 @@
 import Ajv from "ajv";
 import { readFile } from "fs/promises";
 import { parse as YAMLParse } from "yaml";
+import configJsonSchema from "./config-schema.json";
 import { Device, Range } from "./devices";
 import { MidiEvent } from "./midi";
 import { NodeAndPort } from "./pipewire";
@@ -233,12 +234,8 @@ export async function readConfig(path: string): Promise<Config> {
       ? YAMLParse(await readFile(path, { encoding: "utf8" }))
       : JSON.parse(await readFile(path, { encoding: "utf8" }));
 
-  const schema = await readFile(__dirname + "/config-schema.json", {
-    encoding: "utf8",
-  });
-
   const ajv = new Ajv({ allErrors: true });
-  const validate = ajv.compile<Config>(JSON.parse(schema));
+  const validate = ajv.compile<Config>(configJsonSchema);
 
   const valid = validate(contents);
   if (!valid) {

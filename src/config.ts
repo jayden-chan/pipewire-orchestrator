@@ -229,10 +229,21 @@ export type RuntimeConfig = Omit<Config, "device"> & {
 };
 
 export async function readConfig(path: string): Promise<Config> {
-  const contents =
-    path.endsWith(".yaml") || path.endsWith(".yml")
-      ? YAMLParse(await readFile(path, { encoding: "utf8" }))
-      : JSON.parse(await readFile(path, { encoding: "utf8" }));
+  const fileContents = await readFile(path, { encoding: "utf8" });
+  let contents: any = undefined;
+  try {
+    contents = YAMLParse(fileContents);
+  } catch (_) {}
+
+  if (contents === undefined) {
+    try {
+      contents = JSON.parse(fileContents);
+    } catch (_) {}
+  }
+
+  if (contents === undefined) {
+    throw new Error("Failed to parse config file. Tried both JSON and YAML.");
+  }
 
   const ajv = new Ajv({ allErrors: true });
   const validate = ajv.compile<Config>(configJsonSchema);

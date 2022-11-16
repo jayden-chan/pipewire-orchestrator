@@ -173,7 +173,7 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
             )
           );
         },
-        new Date().valueOf() - timestamp < 150 ? 150 : 0
+        Date.now() - timestamp < 150 ? 150 : 0
       );
     };
 
@@ -186,7 +186,7 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
       return;
     }
 
-    const timestamp = new Date().valueOf();
+    const timestamp = Date.now();
     const childProcess = exec(action.command, (err) => {
       const commandState = context.commandStates[id];
       // command has already been killed, no need to run

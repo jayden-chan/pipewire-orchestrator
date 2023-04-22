@@ -497,8 +497,16 @@ export type DaemonContext = {
   };
 };
 
-export async function daemonCommand(configPath: string): Promise<0 | 1> {
-  const rawConfig = await readConfig(configPath);
+async function loadConfig(path: string): Promise<
+  | {
+      config: RuntimeConfig;
+      onConnectRules: Array<[string, Action[]]>;
+      onDisconnectRules: Array<[string, Action[]]>;
+      mixerRules: Array<[string, number | "round_robin"]>;
+    }
+  | { error: 0 | 1 }
+> {
+  const rawConfig = await readConfig(path);
   log("Loaded config file");
 
   const [aconnectListing] = await run("aconnect --list");
@@ -510,37 +518,25 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   const devicePort = await findDevicePort(rawConfig.inputMidi);
   if (!devicePort) {
     error("Failed to extract port from device listing");
-    return 1;
+    return { error: 1 };
   }
 
   const outputPort = await findDevicePort(rawConfig.outputMidi);
   if (!outputPort) {
     error("Failed to extract port from device listing");
-    return 1;
+    return { error: 1 };
   }
-
-  // mapping of plugin name to its input stream
-  const pluginStreams = Object.fromEntries(
-    rawConfig.pipewire.plugins.map((plugin) => {
-      log(`[lv2] starting plugin "${plugin.name}"`);
-      const [prom, stream] = jalv(plugin, rawConfig.lv2Path);
-      prom.catch((err) => {
-        error(`Error: plugin "${plugin.name}" crashed!`);
-        error(err);
-      });
-      return [plugin.name, stream];
-    })
-  );
 
   const device = DEVICE_CONFS[dev];
   if (device === undefined) {
     error(`No device config available for "${dev}"`);
-    return 1;
+    return { error: 1 };
   }
 
   const config: RuntimeConfig = {
     ...rawConfig,
     device,
+    inputMidi: devicePort,
     outputMidi: outputPort,
   };
 
@@ -560,6 +556,31 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
       number | "round_robin"
     ][];
 
+  return { config, onConnectRules, onDisconnectRules, mixerRules };
+}
+
+export async function daemonCommand(configPath: string): Promise<0 | 1> {
+  const configLoadResult = await loadConfig(configPath);
+  if ("error" in configLoadResult) {
+    return configLoadResult.error;
+  }
+
+  const { config, onConnectRules, onDisconnectRules, mixerRules } =
+    configLoadResult;
+
+  // mapping of plugin name to its input stream
+  const pluginStreams = Object.fromEntries(
+    config.pipewire.plugins.map((plugin) => {
+      log(`[lv2] starting plugin "${plugin.name}"`);
+      const [prom, stream] = jalv(plugin, config.lv2Path);
+      prom.catch((err) => {
+        error(`Error: plugin "${plugin.name}" crashed!`);
+        error(err);
+      });
+      return [plugin.name, stream];
+    })
+  );
+
   const [midishPromise, midishIn] = midish("midish");
 
   const context: DaemonContext = {
@@ -577,7 +598,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     // dials default to 50%
     // TODO: maybe make this a config option?
     dials: Object.fromEntries(
-      device.dials.map((d) => [d.label, (d.range[1] - d.range[0]) / 2])
+      config.device.dials.map((d) => [d.label, (d.range[1] - d.range[0]) / 2])
     ),
     pipewire: {
       timeout: undefined,
@@ -645,7 +666,11 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     }, UPDATE_HOOK_TIMEOUT_MS);
   });
 
-  const [watchMidiPromise, midiStream] = watchMidi(devicePort, "watchMidi");
+  const [watchMidiPromise, midiStream] = watchMidi(
+    config.inputMidi,
+    "watchMidi"
+  );
+
   midiStream.on("data", (data) => {
     const event = JSON.parse(data) as MidiEvent;
     debug("[midi]", event);

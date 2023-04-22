@@ -1,6 +1,6 @@
 import { exec, ExecException } from "child_process";
 import { createHash } from "crypto";
-import { Bindings, PassthroughBinding } from "./config";
+import { Bindings, MapFunction, PassthroughBinding } from "./config";
 import { DaemonContext } from "./daemon/daemon";
 import { Button, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
@@ -52,7 +52,8 @@ export function computeMappedVal(
     pct = pct * (end - start) + start;
   }
 
-  const mappedPct = MAP_FUNCTIONS[binding.mapFunction ?? "IDENTITY"](pct);
+  const key: MapFunction = binding.mapFunction ?? "IDENTITY";
+  const mappedPct = MAP_FUNCTIONS[key](pct);
   return Math.round(mappedPct * 16383);
 }
 

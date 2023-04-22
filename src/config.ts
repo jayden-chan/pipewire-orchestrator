@@ -137,6 +137,10 @@ export type LEDRestoreAction = {
   button: string;
 };
 
+export type ConfigReloadAction = {
+  type: "config::reload";
+};
+
 export type Action =
   | LV2LoadPresetAction
   | CommandAction
@@ -151,7 +155,8 @@ export type Action =
   | LEDRestoreAction
   | CancelAction
   | CycleAction
-  | MixerSelectAction;
+  | MixerSelectAction
+  | ConfigReloadAction;
 
 /**
  * Actions(s) to execute on a key event such as a key
@@ -193,13 +198,14 @@ export type Bindings = {
   [key: Label]: Binding;
 };
 
+export type NodeName = string;
 export type NodeEventConfig = {
-  node: string;
+  node: NodeName;
   do: Action[];
 };
 
 export type PipeWireNodeConfig = {
-  node: string;
+  node: NodeName;
   onConnect?: Action[];
   onDisconnect?: Action[];
   mixerChannel?: number | "round_robin";
@@ -226,6 +232,10 @@ export type Config = {
 
 export type RuntimeConfig = Omit<Config, "device"> & {
   device: Device;
+  configPath: string;
+  onConnectRules: Array<[NodeName, Action[]]>;
+  onDisconnectRules: Array<[NodeName, Action[]]>;
+  mixerRules: Array<[NodeName, number | "round_robin"]>;
 };
 
 export async function readConfig(path: string): Promise<Config> {

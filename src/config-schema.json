@@ -59,6 +59,9 @@
                 {
                     "$ref": "#/definitions/LEDRestoreAction",
                     "description": "Restore the previously saved LED state of the\ngiven button"
+                },
+                {
+                    "$ref": "#/definitions/ConfigReloadAction"
                 }
             ]
         },
@@ -119,6 +122,9 @@
                 {
                     "$ref": "#/definitions/LEDRestoreAction",
                     "description": "Restore the previously saved LED state of the\ngiven button"
+                },
+                {
+                    "$ref": "#/definitions/ConfigReloadAction"
                 }
             ]
         },
@@ -133,6 +139,9 @@
         },
         "CommandAction": {
             "$ref": "#/definitions/__type_4"
+        },
+        "ConfigReloadAction": {
+            "$ref": "#/definitions/__type_26"
         },
         "CycleAction": {
             "$ref": "#/definitions/__type_14"
@@ -194,6 +203,9 @@
         },
         "NodeAndPort": {
             "$ref": "#/definitions/__type_20"
+        },
+        "NodeName": {
+            "type": "string"
         },
         "PassthroughBinding": {
             "$ref": "#/definitions/__type_1"
@@ -671,6 +683,21 @@
             ],
             "type": "object"
         },
+        "__type_26": {
+            "additionalProperties": false,
+            "properties": {
+                "type": {
+                    "enum": [
+                        "config::reload"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "type": "object"
+        },
         "__type_3": {
             "additionalProperties": false,
             "description": "Actions(s) to execute on a key event such as a key\npress or release",
@@ -950,7 +977,7 @@
                                 ]
                             },
                             "node": {
-                                "type": "string"
+                                "$ref": "#/definitions/NodeName"
                             },
                             "onConnect": {
                                 "items": {

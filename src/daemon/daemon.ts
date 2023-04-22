@@ -118,6 +118,30 @@ async function doAction(action: Action, context: DaemonContext): Promise<void> {
     ).then(() => Promise.resolve());
   }
 
+  if (action.type === "config::reload") {
+    const configLoadResult = await loadConfig(context.config.configPath);
+    if ("error" in configLoadResult) {
+      error(`[action-config-reload]`, `Invalid config`);
+      return;
+    }
+
+    const { config } = configLoadResult;
+    context.config = config;
+
+    const prevDevices = Object.fromEntries([
+      ...config.onConnectRules.map(([node]) => [node, false]),
+      ...config.onDisconnectRules.map(([node]) => [node, false]),
+    ]);
+
+    context.pipewire.prevDevices = {
+      ...prevDevices,
+      ...context.pipewire.prevDevices,
+    };
+
+    log(`[action-config-reload]`, "Reloaded config!");
+    return;
+  }
+
   if (action.type === "mute") {
     let controlVal = 0;
     if (action.mute) {
@@ -497,16 +521,10 @@ export type DaemonContext = {
   };
 };
 
-async function loadConfig(path: string): Promise<
-  | {
-      config: RuntimeConfig;
-      onConnectRules: Array<[string, Action[]]>;
-      onDisconnectRules: Array<[string, Action[]]>;
-      mixerRules: Array<[string, number | "round_robin"]>;
-    }
-  | { error: 0 | 1 }
-> {
-  const rawConfig = await readConfig(path);
+async function loadConfig(
+  configPath: string
+): Promise<{ config: RuntimeConfig } | { error: 0 | 1 }> {
+  const rawConfig = await readConfig(configPath);
   log("Loaded config file");
 
   const [aconnectListing] = await run("aconnect --list");
@@ -533,30 +551,35 @@ async function loadConfig(path: string): Promise<
     return { error: 1 };
   }
 
-  const config: RuntimeConfig = {
-    ...rawConfig,
-    device,
-    inputMidi: devicePort,
-    outputMidi: outputPort,
-  };
-
-  const onConnectRules: Array<[string, Action[]]> = config.pipewire.rules
+  const onConnectRules: Array<[string, Action[]]> = rawConfig.pipewire.rules
     .filter((rule) => rule.onConnect !== undefined)
     .map((rule) => [rule.node, rule.onConnect]) as [string, Action[]][];
 
-  const onDisconnectRules: Array<[string, Action[]]> = config.pipewire.rules
+  const onDisconnectRules: Array<[string, Action[]]> = rawConfig.pipewire.rules
     .filter((rule) => rule.onDisconnect !== undefined)
     .map((rule) => [rule.node, rule.onDisconnect]) as [string, Action[]][];
 
   const mixerRules: Array<[string, number | "round_robin"]> =
-    config.pipewire.rules
+    rawConfig.pipewire.rules
       .filter((rule) => rule.mixerChannel !== undefined)
       .map((rule) => [rule.node, rule.mixerChannel]) as [
       string,
       number | "round_robin"
     ][];
 
-  return { config, onConnectRules, onDisconnectRules, mixerRules };
+  const config: RuntimeConfig = {
+    ...rawConfig,
+    configPath,
+    onConnectRules,
+    onDisconnectRules,
+    mixerRules,
+    device,
+    inputMidi: devicePort,
+    outputMidi: outputPort,
+  };
+
+  log("Finished loading runtime config");
+  return { config };
 }
 
 export async function daemonCommand(configPath: string): Promise<0 | 1> {
@@ -565,8 +588,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     return configLoadResult.error;
   }
 
-  const { config, onConnectRules, onDisconnectRules, mixerRules } =
-    configLoadResult;
+  let { config } = configLoadResult;
 
   // mapping of plugin name to its input stream
   const pluginStreams = Object.fromEntries(
@@ -603,8 +625,8 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     pipewire: {
       timeout: undefined,
       prevDevices: Object.fromEntries([
-        ...onConnectRules.map(([node]) => [node, false]),
-        ...onDisconnectRules.map(([node]) => [node, false]),
+        ...config.onConnectRules.map(([node]) => [node, false]),
+        ...config.onDisconnectRules.map(([node]) => [node, false]),
       ]),
       state: {
         items: {},
@@ -619,7 +641,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
 
   // set up LED states on initialization
   amidiSend(
-    config.outputMidi,
+    context.config.outputMidi,
     defaultLEDStates(context.config.bindings, context)
   );
 
@@ -634,7 +656,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
 
     context.pipewire.timeout = setTimeout(() => {
       const pwItems = Object.values(context.pipewire.state.items);
-      onConnectRules
+      context.config.onConnectRules
         .filter(
           ([node]) =>
             context.pipewire.prevDevices[node] === false &&
@@ -644,7 +666,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
           rule.forEach((binding) => doAction(binding, context))
         );
 
-      onDisconnectRules
+      context.config.onDisconnectRules
         .filter(
           ([node]) =>
             context.pipewire.prevDevices[node] === true &&
@@ -655,7 +677,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
         );
 
       if (findMixer(context.pipewire.state) !== undefined) {
-        mixerRules.forEach(([nodeName, channel]) =>
+        context.config.mixerRules.forEach(([nodeName, channel]) =>
           handleMixerRule(nodeName, channel, context)
         );
       }

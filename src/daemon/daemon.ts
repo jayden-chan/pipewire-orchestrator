@@ -33,7 +33,7 @@ import { ProcessFailureError } from "../runnable";
 import {
   buttonLEDBytes,
   connectMidiDevices,
-  defaultLEDStates,
+  defaultButtonColors,
   findDevicePort,
   freeMixerPorts,
   isAssignedToMixer,
@@ -492,13 +492,13 @@ function handleMixerRule(
   });
 }
 
-type PluginName = string;
-type ButtonLabel = string;
-type DialLabel = string;
-type ShiftPressed = boolean;
-type Timestamp = number;
-type ID = string;
-type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
+export type PluginName = string;
+export type ButtonLabel = string;
+export type DialLabel = string;
+export type ShiftPressed = boolean;
+export type Timestamp = number;
+export type ID = string;
+export type TimeoutFuncPair = [NodeJS.Timeout, (() => void) | undefined];
 
 export type DaemonContext = {
   config: RuntimeConfig;
@@ -605,6 +605,8 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
 
   const [midishPromise, midishIn] = midish("midish");
 
+  const defaultColors = defaultButtonColors(config.bindings, config.device);
+
   const context: DaemonContext = {
     config,
     midishIn,
@@ -614,7 +616,11 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     ledSaveStates: {},
     commandStates: {},
     cycleStates: {},
-    buttonColors: {},
+    buttonColors: {
+      ...defaultColors.colored,
+      // TODO: restored state of buttons goes here
+      ...defaultColors.off,
+    },
     buttonTimeouts: {},
     mutes: {},
     // dials default to 50%
@@ -642,7 +648,15 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   // set up LED states on initialization
   amidiSend(
     context.config.outputMidi,
-    defaultLEDStates(context.config.bindings, context)
+    Object.entries(context.buttonColors).map(([label, state]) => {
+      const button = context.config.device.buttons.find(
+        (b) => b.label === label
+      );
+
+      return button
+        ? buttonLEDBytes(button, state, button.channel, button.note, context)
+        : undefined;
+    })
   );
 
   const [pipewirePromise, pipewire] = watchPwDump("watchPwDump");

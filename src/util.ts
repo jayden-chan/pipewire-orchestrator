@@ -1,8 +1,8 @@
 import { exec, ExecException } from "child_process";
 import { createHash } from "crypto";
 import { Bindings, MapFunction, PassthroughBinding } from "./config";
-import { DaemonContext } from "./daemon/daemon";
-import { Button, Dial } from "./devices";
+import { ButtonLabel, DaemonContext } from "./daemon/daemon";
+import { Button, Device, Dial } from "./devices";
 import { debug, error, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
@@ -241,26 +241,36 @@ export function buttonLEDBytes(
   }
 }
 
-export function defaultLEDStates(
+export function defaultButtonColors(
   bindings: Bindings,
-  context: DaemonContext
-): ByteTriplet[] {
-  return Object.entries(bindings)
-    .map(([key, binding]) => {
-      const button = context.config.device.buttons.find((b) => b.label === key);
-      if (button === undefined || binding.type !== "button") {
-        return undefined;
-      }
+  device: Device
+): {
+  // colored and off states are returned separately
+  // since they will need to be applied to the device at different
+  // times
+  colored: Record<ButtonLabel, string>;
+  off: Record<ButtonLabel, string>;
+} {
+  const colored: Record<ButtonLabel, string> = {};
+  const off: Record<ButtonLabel, string> = {};
 
-      return buttonLEDBytes(
-        button,
-        binding.defaultLEDState ?? "OFF",
-        button.channel,
-        button.note,
-        context
-      );
-    })
-    .filter((bytes) => bytes !== undefined) as ByteTriplet[];
+  const binds = Object.entries(bindings);
+  device.buttons.forEach((b) => {
+    if (b.ledStates !== undefined) {
+      const matchingBinding = binds.find(([label]) => label === b.label);
+      if (matchingBinding) {
+        const [label, bind] = matchingBinding;
+
+        if (bind.type === "button" && bind.defaultLEDState) {
+          colored[label] = bind.defaultLEDState;
+        }
+      } else {
+        off[b.label] = Object.keys(b.ledStates)[0];
+      }
+    }
+  });
+
+  return { colored, off };
 }
 
 export async function objectId(obj: Record<string, any>): Promise<string> {

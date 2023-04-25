@@ -245,14 +245,15 @@ export function defaultButtonColors(
   bindings: Bindings,
   device: Device
 ): {
-  // colored and off states are returned separately
-  // since they will need to be applied to the device at different
-  // times
-  colored: Record<ButtonLabel, string>;
-  off: Record<ButtonLabel, string>;
+  // these button colors have a lower priority than the
+  // LED colors that will be restored from the saved state
+  before: Record<ButtonLabel, string>;
+  // these button colors have a higher priority than the
+  // LED colors that will be restored from the saved state
+  after: Record<ButtonLabel, string>;
 } {
-  const colored: Record<ButtonLabel, string> = {};
-  const off: Record<ButtonLabel, string> = {};
+  const before: Record<ButtonLabel, string> = {};
+  const after: Record<ButtonLabel, string> = {};
 
   const binds = Object.entries(bindings);
   device.buttons.forEach((b) => {
@@ -261,16 +262,21 @@ export function defaultButtonColors(
       if (matchingBinding) {
         const [label, bind] = matchingBinding;
 
-        if (bind.type === "button" && bind.defaultLEDState) {
-          colored[label] = bind.defaultLEDState;
+        if (bind.type === "button") {
+          if (bind.defaultLEDState) {
+            before[label] = bind.defaultLEDState;
+          }
+          if (bind.defaultLEDStateAlways) {
+            after[label] = bind.defaultLEDStateAlways;
+          }
         }
       } else {
-        off[b.label] = Object.keys(b.ledStates)[0];
+        after[b.label] = Object.keys(b.ledStates)[0];
       }
     }
   });
 
-  return { colored, off };
+  return { before, after };
 }
 
 export async function objectId(obj: Record<string, any>): Promise<string> {

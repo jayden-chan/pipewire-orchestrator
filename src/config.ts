@@ -159,12 +159,24 @@ export type Action =
   | ConfigReloadAction;
 
 /**
- * Actions(s) to execute on a key event such as a key
- * press or release
+ * Actions(s) to execute on a key press event
  */
-export type KeyEventAction = {
+export type KeyPressConfig = {
   actions: Action[];
-  // only used for long press
+};
+
+/**
+ * Actions(s) to execute on a key release event
+ */
+export type KeyReleaseConfig = {
+  actions: Action[];
+};
+
+/**
+ * Actions(s) to execute on a key long press event
+ */
+export type KeyLongPressConfig = {
+  actions: Action[];
   timeout?: number;
 };
 
@@ -183,12 +195,25 @@ export type DialBinding = PassthroughBinding;
 
 export type ButtonBinding = {
   type: "button";
+  // The default state of the button LED if no other color
+  // could be determined. This will be overridden by the state
+  // save/restore functionality. In other words, the LED will be set
+  // to the color that it was when pipewire-orchestrator was when it
+  // last exited
   defaultLEDState?: string;
-  onPress?: KeyEventAction;
-  onLongPress?: KeyEventAction;
-  onShiftPress?: KeyEventAction;
-  onShiftLongPress?: KeyEventAction;
-  onRelease?: KeyEventAction;
+  // The default state of the button LED to set when the program
+  // starts. This will override any previously saved LED state.
+  defaultLEDStateAlways?: string;
+  // The actions to execute when the button is pressed
+  onPress?: KeyPressConfig;
+  // The actions to execute when the button is long pressed
+  onLongPress?: KeyLongPressConfig;
+  // The actions to execute when the button is shift pressed
+  onShiftPress?: KeyPressConfig;
+  // The actions to execute when the button is shift long pressed
+  onShiftLongPress?: KeyLongPressConfig;
+  // The actions to execute when the button is released
+  onRelease?: KeyReleaseConfig;
 };
 
 export type Binding = DialBinding | ButtonBinding;
@@ -219,6 +244,7 @@ export type LV2Plugin = {
 
 export type Config = {
   connections: [string, string][];
+  stateFile?: string;
   device: string;
   inputMidi: string;
   outputMidi: string;

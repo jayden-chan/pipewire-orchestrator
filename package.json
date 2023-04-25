@@ -6,13 +6,11 @@
   "license": "GPL-3.0-only",
   "private": false,
   "scripts": {
-    "build": "tsc",
     "typegen:config": "typescript-json-schema --aliasRefs --topRef --noExtraProps --required --strictNullChecks tsconfig.json Config > src/config-schema.json",
     "typegen": "yarn typegen:config",
     "bundle": "esbuild src/index.ts --platform=node --bundle --target=node16 --minify --outfile=bundle.js",
-    "package": "yarn bundle && cat shebang.txt bundle.js > pw-orchestrator && chmod +x pw-orchestrator && rm bundle.js",
-    "install": "yarn typegen && yarn package && cp pw-orchestrator ~/.local/bin",
-    "dev": "tsc -w"
+    "build": "tsc && yarn bundle && cat shebang.txt bundle.js > pw-orchestrator && chmod +x pw-orchestrator && rm bundle.js",
+    "install": "yarn typegen && yarn build && cp pw-orchestrator ~/.local/bin"
   },
   "devDependencies": {
     "@types/node": "^18.15.13",

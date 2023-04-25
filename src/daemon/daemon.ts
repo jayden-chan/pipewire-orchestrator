@@ -30,6 +30,7 @@ import {
   watchPwDump,
 } from "../pipewire";
 import { ProcessFailureError } from "../runnable";
+import { dumpState, restoreState } from "../state";
 import {
   buttonLEDBytes,
   connectMidiDevices,
@@ -521,9 +522,19 @@ export type DaemonContext = {
   };
 };
 
+export type RestorableDaemonFields = Pick<
+  DaemonContext,
+  | "ranges"
+  | "mutes"
+  | "dials"
+  | "ledSaveStates"
+  | "cycleStates"
+  | "buttonColors"
+>;
+
 async function loadConfig(
   configPath: string
-): Promise<{ config: RuntimeConfig } | { error: 0 | 1 }> {
+): Promise<{ config: RuntimeConfig } | { error: number }> {
   const rawConfig = await readConfig(configPath);
   log("Loaded config file");
 
@@ -582,7 +593,7 @@ async function loadConfig(
   return { config };
 }
 
-export async function daemonCommand(configPath: string): Promise<0 | 1> {
+export async function daemonCommand(configPath: string): Promise<number> {
   const configLoadResult = await loadConfig(configPath);
   if ("error" in configLoadResult) {
     return configLoadResult.error;
@@ -605,8 +616,6 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
 
   const [midishPromise, midishIn] = midish("midish");
 
-  const defaultColors = defaultButtonColors(config.bindings, config.device);
-
   const context: DaemonContext = {
     config,
     midishIn,
@@ -616,11 +625,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     ledSaveStates: {},
     commandStates: {},
     cycleStates: {},
-    buttonColors: {
-      ...defaultColors.colored,
-      // TODO: restored state of buttons goes here
-      ...defaultColors.off,
-    },
+    buttonColors: {},
     buttonTimeouts: {},
     mutes: {},
     // dials default to 50%
@@ -643,6 +648,16 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
       },
     },
     ranges: {},
+  };
+
+  await restoreState(context);
+
+  const defaultColors = defaultButtonColors(config.bindings, config.device);
+  const contextButtonColors = structuredClone(context.buttonColors);
+  context.buttonColors = {
+    ...defaultColors.before,
+    ...contextButtonColors,
+    ...defaultColors.after,
   };
 
   // set up LED states on initialization
@@ -726,6 +741,14 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
     }
   });
 
+  process.on("SIGINT", () => {
+    dumpState(context).then(() => process.exit(0));
+  });
+
+  process.on("SIGTERM", () => {
+    dumpState(context).then(() => process.exit(0));
+  });
+
   try {
     const resolved = await Promise.race([
       watchMidiPromise,
@@ -741,6 +764,7 @@ export async function daemonCommand(configPath: string): Promise<0 | 1> {
   } catch (err) {
     if (err instanceof ProcessFailureError) {
       error(`Problem ocurred with ${err.id}: exit code ${err.exitCode}`);
+      return err.exitCode;
     }
     return 1;
   }

@@ -146,12 +146,26 @@
         "CycleAction": {
             "$ref": "#/definitions/__type_14"
         },
-        "KeyEventAction": {
-            "$ref": "#/definitions/KeyEventAction_1",
-            "description": "Actions(s) to execute on a key event such as a key\npress or release"
+        "KeyLongPressConfig": {
+            "$ref": "#/definitions/KeyLongPressConfig_1",
+            "description": "Actions(s) to execute on a key long press event"
         },
-        "KeyEventAction_1": {
+        "KeyLongPressConfig_1": {
+            "$ref": "#/definitions/__type_27"
+        },
+        "KeyPressConfig": {
+            "$ref": "#/definitions/KeyPressConfig_1",
+            "description": "Actions(s) to execute on a key press event"
+        },
+        "KeyPressConfig_1": {
             "$ref": "#/definitions/__type_3"
+        },
+        "KeyReleaseConfig": {
+            "$ref": "#/definitions/KeyReleaseConfig_1",
+            "description": "Actions(s) to execute on a key release event"
+        },
+        "KeyReleaseConfig_1": {
+            "$ref": "#/definitions/__type_28"
         },
         "LEDRestoreAction": {
             "$ref": "#/definitions/__type_25"
@@ -528,20 +542,23 @@
                 "defaultLEDState": {
                     "type": "string"
                 },
+                "defaultLEDStateAlways": {
+                    "type": "string"
+                },
                 "onLongPress": {
-                    "$ref": "#/definitions/KeyEventAction"
+                    "$ref": "#/definitions/KeyLongPressConfig"
                 },
                 "onPress": {
-                    "$ref": "#/definitions/KeyEventAction"
+                    "$ref": "#/definitions/KeyPressConfig"
                 },
                 "onRelease": {
-                    "$ref": "#/definitions/KeyEventAction"
+                    "$ref": "#/definitions/KeyReleaseConfig"
                 },
                 "onShiftLongPress": {
-                    "$ref": "#/definitions/KeyEventAction"
+                    "$ref": "#/definitions/KeyLongPressConfig"
                 },
                 "onShiftPress": {
-                    "$ref": "#/definitions/KeyEventAction"
+                    "$ref": "#/definitions/KeyPressConfig"
                 },
                 "type": {
                     "enum": [
@@ -698,9 +715,9 @@
             ],
             "type": "object"
         },
-        "__type_3": {
+        "__type_27": {
             "additionalProperties": false,
-            "description": "Actions(s) to execute on a key event such as a key\npress or release",
+            "description": "Actions(s) to execute on a key long press event",
             "properties": {
                 "actions": {
                     "items": {
@@ -710,6 +727,38 @@
                 },
                 "timeout": {
                     "type": "number"
+                }
+            },
+            "required": [
+                "actions"
+            ],
+            "type": "object"
+        },
+        "__type_28": {
+            "additionalProperties": false,
+            "description": "Actions(s) to execute on a key release event",
+            "properties": {
+                "actions": {
+                    "items": {
+                        "$ref": "#/definitions/Action"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": [
+                "actions"
+            ],
+            "type": "object"
+        },
+        "__type_3": {
+            "additionalProperties": false,
+            "description": "Actions(s) to execute on a key press event",
+            "properties": {
+                "actions": {
+                    "items": {
+                        "$ref": "#/definitions/Action"
+                    },
+                    "type": "array"
                 }
             },
             "required": [
@@ -1005,6 +1054,9 @@
                 "rules"
             ],
             "type": "object"
+        },
+        "stateFile": {
+            "type": "string"
         }
     },
     "required": [

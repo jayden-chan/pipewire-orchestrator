@@ -166,7 +166,7 @@ export function watchMidi(
     cmd.stdout.on("data", (data) => {
       const lines = (data.toString() as string)
         .split(/\r?\n/g)
-        .map((l) => l.trim())
+        .map((l) => l.replace(/\s+/g, ""))
         .filter((l) => l.length > 0);
 
       lines

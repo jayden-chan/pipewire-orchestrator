@@ -29,7 +29,7 @@ import {
   updateDump,
   watchPwDump,
 } from "../pipewire";
-import { ProcessFailureError } from "../runnable";
+import { Process, ProcessFailureError } from "../runnable";
 import { dumpState, restoreState } from "../state";
 import {
   buttonLEDBytes,
@@ -43,7 +43,7 @@ import {
   run,
 } from "../util";
 
-const UPDATE_HOOK_TIMEOUT_MS = 150;
+const UPDATE_HOOK_TIMEOUT_MS = 100;
 const DEFAULT_LONG_PRESS_TIMEOUT_MS = 500;
 const DEVICE_CONFS: Record<string, Device> = {
   "APC Key 25 MIDI": apcKey25,
@@ -741,12 +741,13 @@ export async function daemonCommand(configPath: string): Promise<number> {
     }
   });
 
-  process.on("SIGINT", () => {
-    dumpState(context).then(() => process.exit(0));
-  });
+  const exitProm = new Promise<Process>((resolve) => {
+    const cb = (sig: string) => () => {
+      log(`Got ${sig} signal, saving state and exiting`);
+      resolve({ exitCode: 0, id: "signal" });
+    };
 
-  process.on("SIGTERM", () => {
-    dumpState(context).then(() => process.exit(0));
+    ["SIGINT", "SIGTERM"].forEach((sig) => process.on(sig, cb(sig)));
   });
 
   try {
@@ -754,18 +755,25 @@ export async function daemonCommand(configPath: string): Promise<number> {
       watchMidiPromise,
       pipewirePromise,
       midishPromise,
+      exitProm,
     ]);
 
     if (resolved.id === "watchMidi") {
       warn("Device was unplugged");
     }
 
+    await dumpState(context);
+    const allOffStates = context.config.device.buttons
+      .filter((b) => b.ledStates?.OFF !== undefined)
+      .map((b) => buttonLEDBytes(b, "OFF", b.channel, b.note, context));
+    await amidiSend(context.config.outputMidi, allOffStates);
     return 0;
   } catch (err) {
     if (err instanceof ProcessFailureError) {
       error(`Problem ocurred with ${err.id}: exit code ${err.exitCode}`);
       return err.exitCode;
     }
+
     return 1;
   }
 }

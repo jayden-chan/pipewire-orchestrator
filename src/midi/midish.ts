@@ -43,68 +43,93 @@ export function midish(id: string): [Promise<Process>, Readable] {
     read() {},
   });
 
-  const prom = new Promise<Process>((resolve, reject) => {
-    const cmd = spawn("stdbuf", ["-i0", "-o0", "-e0", "midish"]);
+  const prom = new Promise<Process>(async (resolve, reject) => {
+    let restart = true;
+    while (1) {
+      log(`[midish]`, "starting midish");
+      const cmd = spawn("stdbuf", ["-i0", "-o0", "-e0", "midish"]);
+      restart = true;
 
-    cmd.on("close", (exitCode) => {
-      const msg = `midish process exited with code ${exitCode}`;
-      log(msg);
-      if (exitCode === 0) {
-        resolve({ id, exitCode });
-      } else {
-        reject(new ProcessFailureError(msg, id, exitCode ?? 1));
+      let co = "out0";
+      const channelRe = /(out\d+)/;
+
+      const streamDataFn = (data: any) => {
+        let midishCmd = data.toString() as string;
+        if (!midishCmd.endsWith("\n")) {
+          midishCmd += "\n";
+        }
+
+        const [, channel] = midishCmd.match(channelRe) ?? [];
+        if (channel !== undefined && channel !== co) {
+          co = channel;
+          midishCmd = `co ${co}\n${midishCmd}`;
+        }
+
+        debug(`[midish] [cmd]`, midishCmd.replace(/\r?\n/g, "<CR>"));
+
+        cmd.stdin.write(midishCmd, (err) => {
+          if (err) {
+            reject({ error: err });
+          }
+        });
+      };
+
+      stream.on("data", streamDataFn);
+
+      cmd.on("close", (exitCode) => {
+        const msg = `midish process exited with code ${exitCode}`;
+        log(msg);
+
+        stream.removeListener("data", streamDataFn);
+
+        if (!restart) {
+          if (exitCode === 0) {
+            resolve({ id, exitCode });
+          } else {
+            reject(new ProcessFailureError(msg, id, exitCode ?? 1));
+          }
+        }
+      });
+
+      cmd.stderr.on("data", (data) => {
+        const line: string = data.toString().trim();
+        warn(`[midish-stderr]`, line);
+        if (line.includes("sensing timeout")) {
+          warn(
+            `[midish-timeout]`,
+            "midish sensing timeout detected, restarting midish"
+          );
+          restart = true;
+          cmd.kill();
+        }
+      });
+
+      cmd.stdout.on("data", (data) => {
+        const line: string = data.toString().trim();
+        log(`[midish-stdout]`, line);
+      });
+
+      const initCommands = [];
+
+      // set up the midish output device and
+      // output channels 1-16 (0-indexed)
+      // TODO: stop hard-coding the output device
+      initCommands.push(`dnew 0 "14:0" rw`);
+      initCommands.push("i");
+      for (let i = 0; i < 16; i++) {
+        initCommands.push(`onew out${i} {0 ${i}}`);
       }
-    });
+      initCommands.push("co out0");
 
-    cmd.stderr.on("data", (data) => {
-      warn(`[midish-stderr]`, data.toString().trim());
-    });
-
-    cmd.stdout.on("data", (data) => {
-      log(`[midish-stdout]`, data.toString().trim());
-    });
-
-    let co = "out0";
-    const channelRe = /(out\d+)/;
-
-    stream.on("data", (data) => {
-      let midishCmd = data.toString() as string;
-      if (!midishCmd.endsWith("\n")) {
-        midishCmd += "\n";
-      }
-
-      const [, channel] = midishCmd.match(channelRe) ?? [];
-      if (channel !== undefined && channel !== co) {
-        co = channel;
-        midishCmd = `co ${co}\n${midishCmd}`;
-      }
-
-      debug(`[midish] [cmd]`, midishCmd.replace(/\r?\n/g, "<CR>"));
-
-      cmd.stdin.write(midishCmd, (err) => {
+      cmd.stdin.write(initCommands.join("\n") + "\n", (err) => {
         if (err) {
           reject({ error: err });
         }
       });
-    });
 
-    const initCommands = [];
-
-    // set up the midish output device and
-    // output channels 1-16 (0-indexed)
-    // TODO: stop hard-coding the output device
-    initCommands.push(`dnew 0 "14:0" rw`);
-    initCommands.push("i");
-    for (let i = 0; i < 16; i++) {
-      initCommands.push(`onew out${i} {0 ${i}}`);
+      log(`[midish]`, "midish startup finished, waiting for exit");
+      await new Promise<void>((resolve) => cmd.on("exit", () => resolve()));
     }
-    initCommands.push("co out0");
-
-    cmd.stdin.write(initCommands.join("\n") + "\n", (err) => {
-      if (err) {
-        reject({ error: err });
-      }
-    });
   });
 
   return [prom, stream];

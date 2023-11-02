@@ -25,12 +25,13 @@ export function jalv(
     );
 
     cmd.on("close", (code) => {
+      log(`jalv process closed with code ${code}`);
+      reject({ code });
+    });
+
+    cmd.on("exit", (code) => {
       log(`jalv process exited with code ${code}`);
-      if (code === 0) {
-        resolve();
-      } else {
-        reject({ code });
-      }
+      reject({ code });
     });
 
     const controlOutputRe = /^(.*) = (.*)$/;

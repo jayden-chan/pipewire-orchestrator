@@ -16,8 +16,13 @@ export const findPwNode = (searchTerm: string) => {
     const name = item.info?.props?.["node.name"] ?? "";
 
     if (searchTerm.startsWith("re:")) {
-      const regex = new RegExp(searchTerm.slice(3));
-      return regex.test(desc) || regex.test(name);
+      try {
+        const regex = new RegExp(searchTerm.slice(3));
+        return regex.test(desc) || regex.test(name);
+      } catch {
+        // ignore
+      }
+      return false;
     }
 
     return desc === searchTerm || name === searchTerm;

@@ -3,6 +3,7 @@ import { Readable } from "stream";
 import { debug, error, log, warn } from "../logger";
 import { Process, ProcessFailureError } from "../runnable";
 import { run } from "../util";
+import { createServer } from "net";
 
 export type ByteTriplet = {
   b1: number;
@@ -111,10 +112,7 @@ export function midiNumberToEvent(num: number): MidiEventType | undefined {
     case 0b1110:
       return "PITCH_BEND";
     default: {
-      const msg = `Unknown MIDI event type "${num
-        .toString(16)
-        .padStart(2, "0")}" found`;
-
+      const msg = `Unknown MIDI event type "0b${num.toString(2)}" found`;
       debug(`[midi-byte-to-event-type] ${msg}`);
       return undefined;
     }
@@ -125,6 +123,10 @@ export async function amidiSend(
   port: string,
   items: (ByteTriplet | undefined)[]
 ) {
+  if (port === "NONE") {
+    return;
+  }
+
   const hex = items
     .filter((i) => i !== undefined)
     .map((i) => {
@@ -142,93 +144,141 @@ export function watchMidi(
   channel: string,
   id: string
 ): [Promise<Process>, Readable] {
+  if (channel === "SOCKET") {
+    return midiSocketWatch(id);
+  } else {
+    return amidiWatch(channel, id);
+  }
+}
+
+function processHexInput(
+  data: string,
+  state: { prevB1: number; stream: Readable }
+) {
+  const lines = data
+    .split(/\r?\n/g)
+    .map((l) => l.replace(/\s+/g, ""))
+    .filter((l) => l.length > 0);
+
+  lines
+    .map((line) => {
+      if (line.length !== 6 && line.length !== 4) {
+        warn(`encountered hex line that wasn't 2 or 3 bytes long: ${line}`);
+        return undefined;
+      }
+
+      debug("[midi-raw]", line);
+
+      let b1 = parseInt(line.slice(0, 2), 16);
+      let b2 = parseInt(line.slice(2, 4), 16);
+      let b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;
+
+      // For some reason the virtual midi driver omits the first byte
+      // if it's the same as the previous message.
+      if (midiNumberToEvent(b1 >> 4) === undefined && line.length === 4) {
+        b3 = b2;
+        b2 = b1;
+        b1 = state.prevB1;
+      }
+
+      const channel = b1 & 0b00001111;
+
+      let event: MidiEvent | undefined;
+      const type = midiNumberToEvent(b1 >> 4);
+      if (type === undefined) {
+        return undefined;
+      }
+
+      state.prevB1 = b1;
+
+      switch (type) {
+        case "NOTE_ON":
+        case "NOTE_OFF":
+          event = { type, channel, note: b2, velocity: b3 };
+          break;
+        case "POLYPHONIC_AFTERTOUCH":
+          event = { type, channel, note: b2, pressure: b3 };
+          break;
+        case "CONTROL_CHANGE":
+          event = { type, channel, controller: b2, value: b3 };
+          break;
+        case "PROGRAM_CHANGE":
+          event = { type, channel, program: b2 };
+          break;
+        case "CHANNEL_PRESSURE_AFTERTOUCH":
+          event = { type, channel, pressure: b2 };
+          break;
+        case "PITCH_BEND":
+          event = { type, channel, lsb: b2, msb: b3 };
+          break;
+      }
+
+      return event;
+    })
+    .filter((event) => event !== undefined)
+    .forEach((event) => {
+      state.stream.push(JSON.stringify(event));
+    });
+}
+
+function midiSocketWatch(id: string): [Promise<Process>, Readable] {
   const stream = new Readable({
     read() {},
   });
 
-  const prom = new Promise<Process>((resolve, reject) => {
+  const state = { prevB1: 0, stream };
+
+  const prom = new Promise<Process>((_resolve, reject) => {
+    const server = createServer((c) => {
+      c.on("data", (data) => {
+        processHexInput(data.toString() as string, state);
+      });
+
+      c.on("connect", () => {
+        debug(`[socket-midi]`, "client connected");
+      });
+    });
+
+    server.listen("/tmp/pipewire-orchestrator.sock");
+    server.on("error", (err) => {
+      error(`[socket-midi-error]`, JSON.stringify(err));
+      server.close();
+    });
+
+    server.on("close", () =>
+      reject(
+        new ProcessFailureError("Error ocurred in MIDI socket server", id, 1)
+      )
+    );
+  });
+
+  return [prom, stream];
+}
+
+function amidiWatch(channel: string, id: string): [Promise<Process>, Readable] {
+  const stream = new Readable({
+    read() {},
+  });
+
+  const prom = new Promise<Process>((_resolve, reject) => {
     const cmd = spawn("amidi", ["-p", channel, "--dump"]);
-    let prevB1 = 0;
+    const state = { prevB1: 0, stream };
     cmd.on("close", (exitCode) => {
+      const msg = `amidi process closed with code ${exitCode}`;
+      log(msg);
+      reject(new ProcessFailureError(msg, id, exitCode ?? 1));
+    });
+
+    cmd.on("exit", (exitCode) => {
       const msg = `amidi process exited with code ${exitCode}`;
       log(msg);
-      if (exitCode === 0) {
-        resolve({ id, exitCode });
-      } else {
-        reject(new ProcessFailureError(msg, id, exitCode ?? 1));
-      }
+      reject(new ProcessFailureError(msg, id, exitCode ?? 1));
     });
 
-    cmd.stderr.on("data", (data) => {
-      error(`[amidi-stderr]`, data.toString());
-    });
-
-    cmd.stdout.on("data", (data) => {
-      const lines = (data.toString() as string)
-        .split(/\r?\n/g)
-        .map((l) => l.replace(/\s+/g, ""))
-        .filter((l) => l.length > 0);
-
-      lines
-        .map((line) => {
-          if (line.length !== 6 && line.length !== 4) {
-            warn(`encountered hex line that wasn't 2 or 3 bytes long: ${line}`);
-            return undefined;
-          }
-
-          debug("[midi-raw]", line);
-
-          let b1 = parseInt(line.slice(0, 2), 16);
-          let b2 = parseInt(line.slice(2, 4), 16);
-          let b3 = line.length > 4 ? parseInt(line.slice(4, 6), 16) : 0;
-
-          // For some reason the virtual midi driver omits the first byte
-          // if it's the same as the previous message.
-          if (midiNumberToEvent(b1 >> 4) === undefined && line.length === 4) {
-            b3 = b2;
-            b2 = b1;
-            b1 = prevB1;
-          }
-
-          const channel = b1 & 0b00001111;
-
-          let event: MidiEvent | undefined;
-          const type = midiNumberToEvent(b1 >> 4);
-          if (type === undefined) {
-            return undefined;
-          }
-
-          prevB1 = b1;
-
-          switch (type) {
-            case "NOTE_ON":
-            case "NOTE_OFF":
-              event = { type, channel, note: b2, velocity: b3 };
-              break;
-            case "POLYPHONIC_AFTERTOUCH":
-              event = { type, channel, note: b2, pressure: b3 };
-              break;
-            case "CONTROL_CHANGE":
-              event = { type, channel, controller: b2, value: b3 };
-              break;
-            case "PROGRAM_CHANGE":
-              event = { type, channel, program: b2 };
-              break;
-            case "CHANNEL_PRESSURE_AFTERTOUCH":
-              event = { type, channel, pressure: b2 };
-              break;
-            case "PITCH_BEND":
-              event = { type, channel, lsb: b2, msb: b3 };
-              break;
-          }
-
-          return event;
-        })
-        .filter((event) => event !== undefined)
-        .forEach((event) => {
-          stream.push(JSON.stringify(event));
-        });
-    });
+    cmd.stderr.on("data", (data) => error(`[amidi-stderr]`, data.toString()));
+    cmd.stdout.on("data", (data) =>
+      processHexInput(data.toString() as string, state)
+    );
   });
 
   return [prom, stream];

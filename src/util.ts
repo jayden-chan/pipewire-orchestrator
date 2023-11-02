@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { Bindings, MapFunction, PassthroughBinding } from "./config";
 import { ButtonLabel, DaemonContext } from "./daemon/daemon";
 import { Button, Device, Dial } from "./devices";
-import { debug, error, warn } from "./logger";
+import { debug, error, log, warn } from "./logger";
 import { ByteTriplet, midiEventToNumber } from "./midi";
 import { midiEventToMidish } from "./midi/midish";
 import {
@@ -106,6 +106,10 @@ export function run(cmd: string): Promise<[string, string]> {
 export async function findDevicePort(
   name: string
 ): Promise<string | undefined> {
+  if (name === "SOCKET" || name === "NONE") {
+    return name;
+  }
+
   const [amidil] = await run("amidi --list-devices");
   const amidilLines = amidil.split(/\r?\n/g);
   const searchName = name.startsWith("virt:") ? "Virtual Raw MIDI" : name;
@@ -154,6 +158,10 @@ export async function connectMidiDevices(
 
   try {
     const command = `aconnect ${d1Client} ${d2Client}`;
+    log(
+      `[connect-midi-devices]`,
+      `connecting ${d1} -> ${d2} (${d1Client}, ${d2Client})`
+    );
     debug("[connect-midi-devices]", command);
     await run(command);
   } catch (e) {

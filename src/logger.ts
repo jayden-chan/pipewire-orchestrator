@@ -1,3 +1,6 @@
+import { createWriteStream } from "fs";
+import { format } from "util";
+
 export function date() {
   const currentDate = new Date();
   const dd = `${currentDate.getDate()}`.padStart(2, "0");
@@ -18,6 +21,30 @@ export function dateISO() {
   const mm = `${currentDate.getMinutes()}`.padStart(2, "0");
   const ss = `${currentDate.getSeconds()}`.padStart(2, "0");
   return `${yy}-${MM}-${dd}T${hh}:${mm}:${ss}`;
+}
+
+const writeStream =
+  (process.env.PW_ORCH_LOGFILE ?? "") !== ""
+    ? createWriteStream(process.env.PW_ORCH_LOGFILE!)
+    : undefined;
+
+if (writeStream) {
+  ["SIGINT", "SIGTERM"].forEach((sig) =>
+    process.on(sig, () => {
+      writeStream.close();
+    })
+  );
+}
+
+function logWrite(...args: any[]): void {
+  console.error(...args);
+  if (writeStream !== undefined && writeStream.writable) {
+    try {
+      writeStream.write(Buffer.from(format(...args) + "\n"));
+    } catch {
+      // ignore
+    }
+  }
 }
 
 let debug: (...args: any[]) => void;
@@ -121,23 +148,23 @@ if (
       process.env.PW_ORCH_DEBUG === "true"
     ) {
       args.unshift(`[${date()}] [debug]`);
-      console.error(...args);
+      logWrite(...args);
     }
   };
 
   log = (...args: any[]) => {
     args.unshift(`[${date()}] [info]`);
-    console.error(...args);
+    logWrite(...args);
   };
 
   warn = (...args: any[]) => {
     args.unshift(`[${date()}] [warn]`);
-    console.error(...args);
+    logWrite(...args);
   };
 
   error = (...args: any[]) => {
     args.unshift(`[${date()}] [error]`);
-    console.error(...args);
+    logWrite(...args);
   };
 }
 
